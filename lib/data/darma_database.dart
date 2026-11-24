@@ -128,21 +128,65 @@ class DarmaDatabase {
     }
   }
 
-  Future<void> addSimpleTransaction({required String title, required int amount, required String kind}) async {
+  Future<List<Map<String, Object?>>> getTransactionAccounts(String type) async {
+    final db = await database;
+    return db.rawQuery('''
+      SELECT a.id, a.name, a.parent_id,
+        (SELECT COUNT(*) FROM accounts child WHERE child.parent_id = a.id) AS child_count
+      FROM accounts a
+      WHERE a.type = ? AND a.parent_id IS NOT NULL
+      ORDER BY a.parent_id, a.id
+    ''', [type]);
+  }
+
+  Future<void> addSimpleTransaction({
+    required String title,
+    required int amount,
+    required String kind,
+    required int categoryAccountId,
+  }) async {
+    if (amount <= 0) throw ArgumentError('مبلغ باید بیشتر از صفر باشد');
+    if (kind != 'income' && kind != 'expense') {
+      throw ArgumentError('نوع تراکنش نامعتبر است');
+    }
     final db = await database;
     await db.transaction((txn) async {
-      final cash = Sqflite.firstIntValue(await txn.rawQuery("SELECT id FROM accounts WHERE name='کیف پول نقدی' LIMIT 1"))!;
-      final rootType = kind == 'income' ? 'income' : 'expense';
-      final category = Sqflite.firstIntValue(await txn.rawQuery('SELECT id FROM accounts WHERE type=? AND parent_id IS NULL LIMIT 1', [rootType]))!;
-      final id = await txn.insert('journal_transactions', {'title': title, 'amount': amount, 'kind': kind, 'created_at': DateTime.now().toIso8601String()});
+      final expectedType = kind;
+      final selected = await txn.query(
+        'accounts',
+        where: 'id = ? AND type = ? AND parent_id IS NOT NULL',
+        whereArgs: [categoryAccountId, expectedType],
+        limit: 1,
+      );
+      if (selected.isEmpty) throw StateError('حساب انتخاب‌شده معتبر نیست');
+      final children = Sqflite.firstIntValue(await txn.rawQuery(
+        'SELECT COUNT(*) FROM accounts WHERE parent_id = ?',
+        [categoryAccountId],
+      ));
+      if ((children ?? 0) > 0) {
+        throw StateError('برای ثبت تراکنش، تفصیلی این معین را انتخاب کنید');
+      }
+      final cash = Sqflite.firstIntValue(await txn.rawQuery(
+        "SELECT id FROM accounts WHERE name = 'کیف پول نقدی' AND type = 'asset' LIMIT 1",
+      ));
+      if (cash == null) throw StateError('حساب کیف پول نقدی پیدا نشد');
+      final id = await txn.insert('journal_transactions', {
+        'title': title,
+        'amount': amount,
+        'kind': kind,
+        'created_at': DateTime.now().toIso8601String(),
+      });
       if (kind == 'income') {
         await txn.insert('journal_entries', {'transaction_id': id, 'account_id': cash, 'debit': amount, 'credit': 0});
-        await txn.insert('journal_entries', {'transaction_id': id, 'account_id': category, 'debit': 0, 'credit': amount});
+        await txn.insert('journal_entries', {'transaction_id': id, 'account_id': categoryAccountId, 'debit': 0, 'credit': amount});
       } else {
-        await txn.insert('journal_entries', {'transaction_id': id, 'account_id': category, 'debit': amount, 'credit': 0});
+        await txn.insert('journal_entries', {'transaction_id': id, 'account_id': categoryAccountId, 'debit': amount, 'credit': 0});
         await txn.insert('journal_entries', {'transaction_id': id, 'account_id': cash, 'debit': 0, 'credit': amount});
       }
-      final totals = await txn.rawQuery('SELECT COALESCE(SUM(debit),0) d, COALESCE(SUM(credit),0) c FROM journal_entries WHERE transaction_id=?', [id]);
+      final totals = await txn.rawQuery(
+        'SELECT COALESCE(SUM(debit),0) d, COALESCE(SUM(credit),0) c FROM journal_entries WHERE transaction_id=?',
+        [id],
+      );
       if ((totals.first['d'] as num) != (totals.first['c'] as num)) {
         throw StateError('سند حسابداری تراز نیست');
       }
