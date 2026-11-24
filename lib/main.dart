@@ -175,7 +175,15 @@ class _DarmaHomeState extends State<DarmaHome> {
     Text('امکانات دارما', style: Theme.of(context).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.bold)),
     const SizedBox(height: 12),
     for (final item in [('تعاریف و حساب‌ها', Icons.account_tree_outlined), ('اشخاص', Icons.people_outline), ('وام‌ها و تسهیلات', Icons.handshake_outlined), ('خریدهای اعتباری', Icons.credit_card), ('بودجه‌بندی', Icons.pie_chart_outline), ('اهداف مالی', Icons.flag_outlined), ('تقویم مالی', Icons.calendar_month_outlined), ('تنظیمات', Icons.settings_outlined)])
-      Card(child: ListTile(leading: Icon(item.$2), title: Text(item.$1), trailing: const Icon(Icons.chevron_left), onTap: () => item.$1 == 'تنظیمات' ? _showThemes() : _notice('بخش ${item.$1} در برنامه توسعه قرار دارد.'))),
+      Card(child: ListTile(leading: Icon(item.$2), title: Text(item.$1), trailing: const Icon(Icons.chevron_left), onTap: () {
+        if (item.$1 == 'تعاریف و حساب‌ها') {
+          Navigator.of(context).push(MaterialPageRoute(builder: (_) => const AccountsPage()));
+        } else if (item.$1 == 'تنظیمات') {
+          _showThemes();
+        } else {
+          _notice('بخش ${item.$1} در نسخه‌های بعدی فعال می‌شود.');
+        }
+      })),
   ]);
 
   void _showThemes() => showModalBottomSheet(context: context, showDragHandle: true, builder: (_) => Directionality(textDirection: ui.TextDirection.rtl, child: SafeArea(child: Column(mainAxisSize: MainAxisSize.min, children: [
