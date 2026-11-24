@@ -9,7 +9,7 @@ class DarmaDatabase {
   Future<Database> get database async {
     if (_db != null) return _db!;
     final root = await getDatabasesPath();
-    _db = await openDatabase(p.join(root, 'darma.db'), version: 2, onConfigure: (db) async { await db.execute('PRAGMA foreign_keys = ON'); }, onCreate: (db, version) async {
+    _db = await openDatabase(p.join(root, 'darma.db'), version: 3, onConfigure: (db) async { await db.execute('PRAGMA foreign_keys = ON'); }, onCreate: (db, version) async {
       await db.execute('''
         CREATE TABLE accounts (
           id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -51,10 +51,81 @@ class DarmaDatabase {
       for (final e in roots.entries) {
         await db.insert('accounts', {'name': e.key, 'type': e.value, 'is_system': 1, 'created_at': now});
       }
-      final asset = Sqflite.firstIntValue(await db.rawQuery("SELECT id FROM accounts WHERE type='asset'"))!;
-      await db.insert('accounts', {'name': 'کیف پول نقدی', 'type': 'asset', 'parent_id': asset, 'is_system': 1, 'created_at': now});
+      await _seedDefaultAccounts(db);
+    }, onUpgrade: (db, oldVersion, newVersion) async {
+      if (oldVersion < 3) {
+        await _seedDefaultAccounts(db);
+      }
     });
     return _db!;
+  }
+
+
+  Future<void> _seedDefaultAccounts(DatabaseExecutor db) async {
+    final defaults = <String, List<String>>{
+      'asset': [
+        'کیف پول نقدی',
+        'حساب بانکی',
+        'کیف پول الکترونیکی',
+        'پس‌انداز',
+        'سرمایه‌گذاری',
+        'طلب از اشخاص',
+      ],
+      'liability': [
+        'وام دریافتی',
+        'بدهی به اشخاص',
+        'خرید اعتباری',
+        'اقساط پرداختنی',
+        'بدهی کارت و تسهیلات',
+      ],
+      'income': [
+        'حقوق و دستمزد',
+        'درآمد شغلی',
+        'درآمد کسب‌وکار',
+        'درآمد سرمایه‌گذاری',
+        'سود سپرده بانکی',
+        'هدایا و دریافتی‌های متفرقه',
+      ],
+      'expense': [
+        'خوراک و مواد غذایی',
+        'مسکن و اجاره',
+        'قبوض و خدمات',
+        'حمل‌ونقل و خودرو',
+        'درمان و بهداشت',
+        'پوشاک و لوازم شخصی',
+        'آموزش و توسعه فردی',
+        'تفریح و سفر',
+        'خرید لوازم خانه',
+        'هزینه‌های خانواده',
+        'کارمزد بانکی',
+        'مالیات و عوارض',
+        'سایر هزینه‌ها',
+      ],
+    };
+
+    final now = DateTime.now().toIso8601String();
+    for (final group in defaults.entries) {
+      final rootId = Sqflite.firstIntValue(await db.rawQuery(
+        'SELECT id FROM accounts WHERE type = ? AND parent_id IS NULL LIMIT 1',
+        [group.key],
+      ));
+      if (rootId == null) continue;
+
+      for (final name in group.value) {
+        final existing = Sqflite.firstIntValue(await db.rawQuery(
+          'SELECT COUNT(*) FROM accounts WHERE type = ? AND name = ?',
+          [group.key, name],
+        ));
+        if ((existing ?? 0) > 0) continue;
+        await db.insert('accounts', {
+          'name': name,
+          'type': group.key,
+          'parent_id': rootId,
+          'is_system': name == 'کیف پول نقدی' ? 1 : 0,
+          'created_at': now,
+        });
+      }
+    }
   }
 
   Future<void> addSimpleTransaction({required String title, required int amount, required String kind}) async {
