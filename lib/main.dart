@@ -1,3 +1,4 @@
+import 'dart:ui' as ui;
 import 'package:flutter/material.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:intl/intl.dart';
@@ -100,7 +101,7 @@ class _DarmaHomeState extends State<DarmaHome> {
       _morePage(),
     ];
     return Directionality(
-      textDirection: TextDirection.rtl,
+      textDirection: ui.TextDirection.rtl,
       child: Scaffold(
         appBar: AppBar(
           title: const Row(children: [Icon(Icons.account_balance_wallet_rounded), SizedBox(width: 9), Text('دارما', style: TextStyle(fontWeight: FontWeight.w800))]),
@@ -176,7 +177,7 @@ class _DarmaHomeState extends State<DarmaHome> {
       Card(child: ListTile(leading: Icon(item.$2), title: Text(item.$1), trailing: const Icon(Icons.chevron_left), onTap: () => item.$1 == 'تنظیمات' ? _showThemes() : _notice('بخش ${item.$1} در برنامه توسعه قرار دارد.'))),
   ]);
 
-  void _showThemes() => showModalBottomSheet(context: context, showDragHandle: true, builder: (_) => Directionality(textDirection: TextDirection.rtl, child: SafeArea(child: Column(mainAxisSize: MainAxisSize.min, children: [
+  void _showThemes() => showModalBottomSheet(context: context, showDragHandle: true, builder: (_) => Directionality(textDirection: ui.TextDirection.rtl, child: SafeArea(child: Column(mainAxisSize: MainAxisSize.min, children: [
     const Padding(padding: EdgeInsets.all(16), child: Text('انتخاب پوسته', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 18))),
     for (final name in _themes.keys) ListTile(leading: CircleAvatar(backgroundColor: _themes[name]), title: Text(name), trailing: widget.themeName == name ? const Icon(Icons.check_circle) : null, onTap: () { widget.onThemeChanged(name); Navigator.pop(context); }),
     const SizedBox(height: 12),
@@ -187,7 +188,7 @@ class _DarmaHomeState extends State<DarmaHome> {
     final title = TextEditingController();
     final amount = TextEditingController();
     final formKey = GlobalKey<FormState>();
-    final result = await showModalBottomSheet<bool>(context: context, isScrollControlled: true, showDragHandle: true, builder: (ctx) => StatefulBuilder(builder: (ctx, setSheet) => Directionality(textDirection: TextDirection.rtl, child: Padding(
+    final result = await showModalBottomSheet<bool>(context: context, isScrollControlled: true, showDragHandle: true, builder: (ctx) => StatefulBuilder(builder: (ctx, setSheet) => Directionality(textDirection: ui.TextDirection.rtl, child: Padding(
       padding: EdgeInsets.fromLTRB(20, 8, 20, MediaQuery.of(ctx).viewInsets.bottom + 24),
       child: Form(key: formKey, child: Column(mainAxisSize: MainAxisSize.min, crossAxisAlignment: CrossAxisAlignment.stretch, children: [
         const Text('تراکنش جدید', style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold)),
