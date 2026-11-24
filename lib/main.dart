@@ -194,28 +194,141 @@ class _DarmaHomeState extends State<DarmaHome> {
 
   Future<void> _newTransaction({String? kind}) async {
     String selected = kind ?? 'expense';
+    final accounts = await DarmaDatabase.instance.getAccountSummaries();
+    List<Map<String, Object?>> categoryAccounts(String type) =>
+        accounts.where((a) => a['type'] == type && a['parent_id'] == a['root_id']).toList();
+    final initialMains = categoryAccounts(selected);
+    if (initialMains.isEmpty) {
+      _notice('ابتدا برای این سرفصل یک حساب معین تعریف کنید.');
+      return;
+    }
+    int selectedMainId = initialMains.first['id'] as int;
+    List<Map<String, Object?>> detailsFor(int mainId) =>
+        accounts.where((a) => a['type'] == selected && a['parent_id'] == mainId).toList();
+    int? selectedDetailId = detailsFor(selectedMainId).isEmpty
+        ? null
+        : detailsFor(selectedMainId).first['id'] as int;
+
     final title = TextEditingController();
     final amount = TextEditingController();
     final formKey = GlobalKey<FormState>();
-    final result = await showModalBottomSheet<bool>(context: context, isScrollControlled: true, showDragHandle: true, builder: (ctx) => StatefulBuilder(builder: (ctx, setSheet) => Directionality(textDirection: ui.TextDirection.rtl, child: Padding(
-      padding: EdgeInsets.fromLTRB(20, 8, 20, MediaQuery.of(ctx).viewInsets.bottom + 24),
-      child: Form(key: formKey, child: Column(mainAxisSize: MainAxisSize.min, crossAxisAlignment: CrossAxisAlignment.stretch, children: [
-        const Text('تراکنش جدید', style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold)),
-        const SizedBox(height: 14),
-        SegmentedButton<String>(segments: const [ButtonSegment(value: 'income', label: Text('دریافت'), icon: Icon(Icons.south_west)), ButtonSegment(value: 'expense', label: Text('پرداخت'), icon: Icon(Icons.north_east))], selected: {selected}, onSelectionChanged: (v) => setSheet(() => selected = v.first)),
-        const SizedBox(height: 14),
-        TextFormField(controller: title, decoration: const InputDecoration(labelText: 'شرح تراکنش', border: OutlineInputBorder()), validator: (v) => (v == null || v.trim().isEmpty) ? 'شرح را وارد کنید' : null),
-        const SizedBox(height: 12),
-        TextFormField(controller: amount, keyboardType: TextInputType.number, decoration: const InputDecoration(labelText: 'مبلغ به ریال', border: OutlineInputBorder()), validator: (v) => _parseAmount(v ?? '') <= 0 ? 'مبلغ معتبر وارد کنید' : null),
-        const SizedBox(height: 18),
-        FilledButton(onPressed: () async {
-          if (!formKey.currentState!.validate()) return;
-          await DarmaDatabase.instance.addSimpleTransaction(title: title.text.trim(), amount: _parseAmount(amount.text), kind: selected);
-          if (ctx.mounted) Navigator.pop(ctx, true);
-        }, child: const Text('ثبت تراکنش')),
-      ])),
-    ))));
-    title.dispose(); amount.dispose();
+    final result = await showModalBottomSheet<bool>(
+      context: context,
+      isScrollControlled: true,
+      showDragHandle: true,
+      builder: (ctx) => StatefulBuilder(
+        builder: (ctx, setSheet) {
+          final mains = categoryAccounts(selected);
+          final details = detailsFor(selectedMainId);
+          final selectedCategoryId = details.isEmpty ? selectedMainId : selectedDetailId;
+          return Directionality(
+            textDirection: ui.TextDirection.rtl,
+            child: Padding(
+              padding: EdgeInsets.fromLTRB(20, 8, 20, MediaQuery.of(ctx).viewInsets.bottom + 24),
+              child: Form(
+                key: formKey,
+                child: SingleChildScrollView(
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    children: [
+                      const Text('تراکنش جدید', style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold)),
+                      const SizedBox(height: 14),
+                      SegmentedButton<String>(
+                        segments: const [
+                          ButtonSegment(value: 'income', label: Text('دریافت'), icon: Icon(Icons.south_west)),
+                          ButtonSegment(value: 'expense', label: Text('پرداخت'), icon: Icon(Icons.north_east)),
+                        ],
+                        selected: {selected},
+                        onSelectionChanged: (v) {
+                          setSheet(() {
+                            selected = v.first;
+                            final nextMains = categoryAccounts(selected);
+                            selectedMainId = nextMains.first['id'] as int;
+                            final nextDetails = detailsFor(selectedMainId);
+                            selectedDetailId = nextDetails.isEmpty ? null : nextDetails.first['id'] as int;
+                          });
+                        },
+                      ),
+                      const SizedBox(height: 14),
+                      DropdownButtonFormField<int>(
+                        value: selectedMainId,
+                        isExpanded: true,
+                        decoration: const InputDecoration(labelText: 'حساب معین', border: OutlineInputBorder()),
+                        items: mains.map((a) => DropdownMenuItem<int>(
+                          value: a['id'] as int,
+                          child: Text(a['name'] as String, overflow: TextOverflow.ellipsis),
+                        )).toList(),
+                        onChanged: (value) {
+                          if (value == null) return;
+                          setSheet(() {
+                            selectedMainId = value;
+                            final nextDetails = detailsFor(value);
+                            selectedDetailId = nextDetails.isEmpty ? null : nextDetails.first['id'] as int;
+                          });
+                        },
+                        validator: (_) => selectedMainId > 0 ? null : 'حساب معین را انتخاب کنید',
+                      ),
+                      if (details.isNotEmpty) ...[
+                        const SizedBox(height: 12),
+                        DropdownButtonFormField<int>(
+                          value: selectedDetailId,
+                          isExpanded: true,
+                          decoration: const InputDecoration(labelText: 'حساب تفصیلی', border: OutlineInputBorder()),
+                          items: details.map((a) => DropdownMenuItem<int>(
+                            value: a['id'] as int,
+                            child: Text(a['name'] as String, overflow: TextOverflow.ellipsis),
+                          )).toList(),
+                          onChanged: (value) => setSheet(() => selectedDetailId = value),
+                          validator: (value) => value == null ? 'حساب تفصیلی را انتخاب کنید' : null,
+                        ),
+                      ],
+                      const SizedBox(height: 12),
+                      TextFormField(
+                        controller: title,
+                        decoration: const InputDecoration(labelText: 'شرح تراکنش', border: OutlineInputBorder()),
+                        validator: (v) => (v == null || v.trim().isEmpty) ? 'شرح را وارد کنید' : null,
+                      ),
+                      const SizedBox(height: 12),
+                      TextFormField(
+                        controller: amount,
+                        keyboardType: TextInputType.number,
+                        decoration: const InputDecoration(labelText: 'مبلغ به ریال', border: OutlineInputBorder()),
+                        validator: (v) => _parseAmount(v ?? '') <= 0 ? 'مبلغ معتبر وارد کنید' : null,
+                      ),
+                      const SizedBox(height: 18),
+                      FilledButton(
+                        onPressed: () async {
+                          if (!formKey.currentState!.validate() || selectedCategoryId == null) return;
+                          try {
+                            await DarmaDatabase.instance.addSimpleTransaction(
+                              title: title.text.trim(),
+                              amount: _parseAmount(amount.text),
+                              kind: selected,
+                              categoryAccountId: selectedCategoryId,
+                            );
+                            if (ctx.mounted) Navigator.pop(ctx, true);
+                          } catch (error) {
+                            if (ctx.mounted) {
+                              ScaffoldMessenger.of(ctx).showSnackBar(
+                                SnackBar(content: Text(error.toString().replaceFirst('Exception: ', ''))),
+                              );
+                            }
+                          }
+                        },
+                        child: const Text('ثبت تراکنش'),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            ),
+          );
+        },
+      ),
+    );
+    title.dispose();
+    amount.dispose();
     if (result == true) await _refresh();
   }
 
