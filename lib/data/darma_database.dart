@@ -9,7 +9,7 @@ class DarmaDatabase {
   Future<Database> get database async {
     if (_db != null) return _db!;
     final root = await getDatabasesPath();
-    _db = await openDatabase(p.join(root, 'darma.db'), version: 1, onConfigure: (db) async { await db.execute('PRAGMA foreign_keys = ON'); }, onCreate: (db, version) async {
+    _db = await openDatabase(p.join(root, 'darma.db'), version: 2, onConfigure: (db) async { await db.execute('PRAGMA foreign_keys = ON'); }, onCreate: (db, version) async {
       await db.execute('''
         CREATE TABLE accounts (
           id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -77,4 +77,85 @@ class DarmaDatabase {
       }
     });
   }
+
+  Future<List<Map<String, Object?>>> getAccountSummaries() async {
+    final db = await database;
+    return db.rawQuery('''
+      SELECT a.id, a.name, a.type, a.parent_id, a.is_system,
+        CASE
+          WHEN a.type IN ('asset','expense')
+            THEN COALESCE(SUM(e.debit - e.credit), 0)
+          ELSE COALESCE(SUM(e.credit - e.debit), 0)
+        END AS balance,
+        COUNT(e.id) AS entry_count
+      FROM accounts a
+      LEFT JOIN journal_entries e ON e.account_id = a.id
+      WHERE a.parent_id IS NOT NULL
+      GROUP BY a.id
+      ORDER BY a.type, a.id
+    ''');
+  }
+
+  Future<int> createAccount({required String name, required String type}) async {
+    final cleanName = name.trim();
+    if (cleanName.isEmpty) throw ArgumentError('نام حساب الزامی است');
+    if (!const ['asset', 'liability', 'income', 'expense'].contains(type)) {
+      throw ArgumentError('نوع حساب نامعتبر است');
+    }
+    final db = await database;
+    return db.transaction((txn) async {
+      final duplicate = Sqflite.firstIntValue(await txn.rawQuery(
+        'SELECT COUNT(*) FROM accounts WHERE name = ? AND type = ?',
+        [cleanName, type],
+      ));
+      if ((duplicate ?? 0) > 0) throw StateError('حسابی با این نام در این سرفصل وجود دارد');
+      final rootId = Sqflite.firstIntValue(await txn.rawQuery(
+        'SELECT id FROM accounts WHERE type = ? AND parent_id IS NULL LIMIT 1',
+        [type],
+      ));
+      if (rootId == null) throw StateError('سرفصل اصلی پیدا نشد');
+      return txn.insert('accounts', {
+        'name': cleanName,
+        'type': type,
+        'parent_id': rootId,
+        'is_system': 0,
+        'created_at': DateTime.now().toIso8601String(),
+      });
+    });
+  }
+
+  Future<void> renameAccount({required int id, required String name}) async {
+    final cleanName = name.trim();
+    if (cleanName.isEmpty) throw ArgumentError('نام حساب الزامی است');
+    final db = await database;
+    final rows = await db.query('accounts', where: 'id = ?', whereArgs: [id], limit: 1);
+    if (rows.isEmpty || rows.first['is_system'] == 1) {
+      throw StateError('این حساب قابل ویرایش نیست');
+    }
+    final duplicate = Sqflite.firstIntValue(await db.rawQuery(
+      'SELECT COUNT(*) FROM accounts WHERE name = ? AND type = ? AND id != ?',
+      [cleanName, rows.first['type'], id],
+    ));
+    if ((duplicate ?? 0) > 0) throw StateError('حسابی با این نام وجود دارد');
+    await db.update('accounts', {'name': cleanName}, where: 'id = ?', whereArgs: [id]);
+  }
+
+  Future<void> deleteAccount(int id) async {
+    final db = await database;
+    final rows = await db.query('accounts', where: 'id = ?', whereArgs: [id], limit: 1);
+    if (rows.isEmpty || rows.first['is_system'] == 1) {
+      throw StateError('حساب اصلی یا پیش‌فرض قابل حذف نیست');
+    }
+    final used = Sqflite.firstIntValue(await db.rawQuery(
+      'SELECT COUNT(*) FROM journal_entries WHERE account_id = ?', [id],
+    ));
+    final children = Sqflite.firstIntValue(await db.rawQuery(
+      'SELECT COUNT(*) FROM accounts WHERE parent_id = ?', [id],
+    ));
+    if ((used ?? 0) > 0 || (children ?? 0) > 0) {
+      throw StateError('این حساب سابقه مالی یا زیرحساب دارد و قابل حذف نیست');
+    }
+    await db.delete('accounts', where: 'id = ?', whereArgs: [id]);
+  }
+
 }
