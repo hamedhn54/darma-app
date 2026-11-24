@@ -153,6 +153,7 @@ class DarmaDatabase {
     final db = await database;
     return db.rawQuery('''
       SELECT a.id, a.name, a.type, a.parent_id, a.is_system,
+        (SELECT root.id FROM accounts root WHERE root.type = a.type AND root.parent_id IS NULL LIMIT 1) AS root_id,
         CASE
           WHEN a.type IN ('asset','expense')
             THEN COALESCE(SUM(e.debit - e.credit), 0)
@@ -167,7 +168,11 @@ class DarmaDatabase {
     ''');
   }
 
-  Future<int> createAccount({required String name, required String type}) async {
+  Future<int> createAccount({
+    required String name,
+    required String type,
+    int? parentId,
+  }) async {
     final cleanName = name.trim();
     if (cleanName.isEmpty) throw ArgumentError('نام حساب الزامی است');
     if (!const ['asset', 'liability', 'income', 'expense'].contains(type)) {
@@ -175,20 +180,32 @@ class DarmaDatabase {
     }
     final db = await database;
     return db.transaction((txn) async {
+      int targetParent;
+      if (parentId == null) {
+        final rootId = Sqflite.firstIntValue(await txn.rawQuery(
+          'SELECT id FROM accounts WHERE type = ? AND parent_id IS NULL LIMIT 1',
+          [type],
+        ));
+        if (rootId == null) throw StateError('سرفصل اصلی پیدا نشد');
+        targetParent = rootId;
+      } else {
+        final parents = await txn.query('accounts', where: 'id = ?', whereArgs: [parentId], limit: 1);
+        if (parents.isEmpty || parents.first['type'] != type) {
+          throw StateError('حساب معین معتبر نیست');
+        }
+        final parentParentId = parents.first['parent_id'];
+        if (parentParentId == null) throw StateError('امکان ایجاد تفصیلی زیر سرفصل اصلی وجود ندارد');
+        targetParent = parentId;
+      }
       final duplicate = Sqflite.firstIntValue(await txn.rawQuery(
-        'SELECT COUNT(*) FROM accounts WHERE name = ? AND type = ?',
-        [cleanName, type],
+        'SELECT COUNT(*) FROM accounts WHERE name = ? AND type = ? AND parent_id = ?',
+        [cleanName, type, targetParent],
       ));
-      if ((duplicate ?? 0) > 0) throw StateError('حسابی با این نام در این سرفصل وجود دارد');
-      final rootId = Sqflite.firstIntValue(await txn.rawQuery(
-        'SELECT id FROM accounts WHERE type = ? AND parent_id IS NULL LIMIT 1',
-        [type],
-      ));
-      if (rootId == null) throw StateError('سرفصل اصلی پیدا نشد');
+      if ((duplicate ?? 0) > 0) throw StateError('حسابی با این نام در این گروه وجود دارد');
       return txn.insert('accounts', {
         'name': cleanName,
         'type': type,
-        'parent_id': rootId,
+        'parent_id': targetParent,
         'is_system': 0,
         'created_at': DateTime.now().toIso8601String(),
       });
