@@ -80,6 +80,16 @@ class _DarmaHomeState extends State<DarmaHome> {
 
   String _digits(String s) => s.replaceAll('0','۰').replaceAll('1','۱').replaceAll('2','۲').replaceAll('3','۳').replaceAll('4','۴').replaceAll('5','۵').replaceAll('6','۶').replaceAll('7','۷').replaceAll('8','۸').replaceAll('9','۹');
   String _moneyText(int v) => _digits(_money.format(v));
+  int _parseAmount(String value) {
+    const fa = '۰۱۲۳۴۵۶۷۸۹';
+    const ar = '٠١٢٣٤٥٦٧٨٩';
+    var normalized = value;
+    for (var i = 0; i < 10; i++) {
+      normalized = normalized.replaceAll(fa[i], '$i').replaceAll(ar[i], '$i');
+    }
+    normalized = normalized.replaceAll(',', '').replaceAll('٬', '').replaceAll(' ', '');
+    return int.tryParse(normalized) ?? 0;
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -154,9 +164,8 @@ class _DarmaHomeState extends State<DarmaHome> {
     ]),
   );
 
-  Widget _actionTile(String title, IconData icon, Color color, VoidCallback tap) => Expanded(
-    child: InkWell(onTap: tap, borderRadius: BorderRadius.circular(18), child: Card(child: Padding(padding: const EdgeInsets.symmetric(vertical: 18), child: Column(children: [Icon(icon, color: color), const SizedBox(height: 8), Text(title, style: const TextStyle(fontWeight: FontWeight.w700))])))),
-  );
+  Widget _actionTile(String title, IconData icon, Color color, VoidCallback tap) =>
+      InkWell(onTap: tap, borderRadius: BorderRadius.circular(18), child: Card(child: Padding(padding: const EdgeInsets.symmetric(vertical: 18), child: Column(children: [Icon(icon, color: color), const SizedBox(height: 8), Text(title, style: const TextStyle(fontWeight: FontWeight.w700))]))));
 
   Widget _simplePage(String title, IconData icon, String message) => Center(child: Padding(padding: const EdgeInsets.all(28), child: Column(mainAxisSize: MainAxisSize.min, children: [Icon(icon, size: 48, color: Theme.of(context).colorScheme.primary), const SizedBox(height: 16), Text(title, style: Theme.of(context).textTheme.headlineSmall), const SizedBox(height: 8), Text(message, textAlign: TextAlign.center)])));
 
@@ -187,11 +196,11 @@ class _DarmaHomeState extends State<DarmaHome> {
         const SizedBox(height: 14),
         TextFormField(controller: title, decoration: const InputDecoration(labelText: 'شرح تراکنش', border: OutlineInputBorder()), validator: (v) => (v == null || v.trim().isEmpty) ? 'شرح را وارد کنید' : null),
         const SizedBox(height: 12),
-        TextFormField(controller: amount, keyboardType: TextInputType.number, decoration: const InputDecoration(labelText: 'مبلغ به ریال', border: OutlineInputBorder()), validator: (v) => int.tryParse((v ?? '').replaceAll(',', '')) == null || int.parse(v!.replaceAll(',', '')) <= 0 ? 'مبلغ معتبر وارد کنید' : null),
+        TextFormField(controller: amount, keyboardType: TextInputType.number, decoration: const InputDecoration(labelText: 'مبلغ به ریال', border: OutlineInputBorder()), validator: (v) => _parseAmount(v ?? '') <= 0 ? 'مبلغ معتبر وارد کنید' : null),
         const SizedBox(height: 18),
         FilledButton(onPressed: () async {
           if (!formKey.currentState!.validate()) return;
-          await DarmaDatabase.instance.addSimpleTransaction(title: title.text.trim(), amount: int.parse(amount.text.replaceAll(',', '')), kind: selected);
+          await DarmaDatabase.instance.addSimpleTransaction(title: title.text.trim(), amount: _parseAmount(amount.text), kind: selected);
           if (ctx.mounted) Navigator.pop(ctx, true);
         }, child: const Text('ثبت تراکنش')),
       ])),

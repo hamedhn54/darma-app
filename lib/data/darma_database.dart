@@ -9,7 +9,7 @@ class DarmaDatabase {
   Future<Database> get database async {
     if (_db != null) return _db!;
     final root = await getDatabasesPath();
-    _db = await openDatabase(p.join(root, 'darma.db'), version: 1, onCreate: (db, version) async {
+    _db = await openDatabase(p.join(root, 'darma.db'), version: 1, onConfigure: (db) async { await db.execute('PRAGMA foreign_keys = ON'); }, onCreate: (db, version) async {
       await db.execute('''
         CREATE TABLE accounts (
           id INTEGER PRIMARY KEY AUTOINCREMENT,
