@@ -20,35 +20,99 @@ class AccountsPage extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
     return Scaffold(
-      appBar: AppBar(title: const Text('تعاریف')),
+      appBar: AppBar(title: const Text('تعاریف و حساب‌ها')),
       body: ListView(
-        padding: const EdgeInsets.all(16),
+        padding: const EdgeInsets.fromLTRB(16, 12, 16, 32),
         children: [
-          Text(
-            'سرفصل موردنظر را انتخاب کنید تا حساب‌های معین و تفصیلی آن را مدیریت کنید.',
-            style: Theme.of(context).textTheme.bodyMedium,
-          ),
-          const SizedBox(height: 16),
-          for (final entry in _types.entries)
-            Card(
-              clipBehavior: Clip.antiAlias,
-              child: ListTile(
-                contentPadding:
-                    const EdgeInsets.symmetric(horizontal: 18, vertical: 10),
-                leading: CircleAvatar(
-                  backgroundColor:
-                      Theme.of(context).colorScheme.primaryContainer,
-                  child: Icon(_icons[entry.key]),
+          Container(
+            padding: const EdgeInsets.all(22),
+            decoration: BoxDecoration(
+              borderRadius: BorderRadius.circular(26),
+              gradient: LinearGradient(
+                colors: [
+                  scheme.primary,
+                  scheme.secondary,
+                  scheme.primary.withValues(alpha: .82),
+                ],
+                begin: Alignment.topRight,
+                end: Alignment.bottomLeft,
+              ),
+              boxShadow: [
+                BoxShadow(
+                  color: scheme.primary.withValues(alpha: .18),
+                  blurRadius: 22,
+                  offset: const Offset(0, 10),
                 ),
-                title: Text(entry.value,
-                    style: const TextStyle(fontWeight: FontWeight.w800)),
-                subtitle: const Text('مشاهده و مدیریت معین و تفصیلی'),
-                trailing: const Icon(Icons.chevron_left_rounded),
-                onTap: () => Navigator.of(context).push(
-                  MaterialPageRoute(
-                    builder: (_) =>
-                        AccountGroupPage(type: entry.key, title: entry.value),
+              ],
+            ),
+            child: const Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Icon(Icons.account_tree_rounded, color: Colors.white, size: 30),
+                SizedBox(height: 18),
+                Text('ساختار مالی شما',
+                    style: TextStyle(color: Colors.white70, fontSize: 13)),
+                SizedBox(height: 5),
+                Text('مدیریت حساب‌ها و سرفصل‌ها',
+                    style: TextStyle(color: Colors.white, fontSize: 19, fontWeight: FontWeight.w900)),
+                SizedBox(height: 8),
+                Text('حساب‌های کل، معین و تفصیلی را از این بخش سازمان‌دهی کنید.',
+                    style: TextStyle(color: Colors.white70, height: 1.6)),
+              ],
+            ),
+          ),
+          const SizedBox(height: 24),
+          Text('سرفصل‌های اصلی',
+              style: Theme.of(context).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w900)),
+          const SizedBox(height: 12),
+          for (final entry in _types.entries)
+            Padding(
+              padding: const EdgeInsets.only(bottom: 11),
+              child: Material(
+                color: scheme.surface,
+                borderRadius: BorderRadius.circular(21),
+                child: InkWell(
+                  borderRadius: BorderRadius.circular(21),
+                  onTap: () => Navigator.of(context).push(
+                    MaterialPageRoute(
+                      builder: (_) => AccountGroupPage(type: entry.key, title: entry.value),
+                    ),
+                  ),
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 17, vertical: 16),
+                    decoration: BoxDecoration(
+                      borderRadius: BorderRadius.circular(21),
+                      border: Border.all(color: scheme.outline.withValues(alpha: .55)),
+                    ),
+                    child: Row(
+                      children: [
+                        Container(
+                          width: 48,
+                          height: 48,
+                          decoration: BoxDecoration(
+                            color: scheme.primary.withValues(alpha: .12),
+                            borderRadius: BorderRadius.circular(16),
+                          ),
+                          alignment: Alignment.center,
+                          child: Icon(_icons[entry.key], color: scheme.primary, size: 24),
+                        ),
+                        const SizedBox(width: 14),
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(entry.value, style: const TextStyle(fontWeight: FontWeight.w900, fontSize: 15)),
+                              const SizedBox(height: 4),
+                              Text('مدیریت حساب‌های معین و تفصیلی',
+                                  style: Theme.of(context).textTheme.bodySmall?.copyWith(color: scheme.onSurfaceVariant)),
+                            ],
+                          ),
+                        ),
+                        Icon(Icons.arrow_back_ios_new_rounded, size: 16, color: scheme.onSurfaceVariant),
+                      ],
+                    ),
                   ),
                 ),
               ),
@@ -520,7 +584,17 @@ class _AccountGroupPageState extends State<AccountGroupPage> {
   Widget build(BuildContext context) {
     final mains = _mainAccounts;
     return Scaffold(
-      appBar: AppBar(title: Text(widget.title)),
+      appBar: AppBar(
+        title: Text(widget.title),
+        actions: [
+          IconButton(
+            tooltip: 'به‌روزرسانی',
+            onPressed: _load,
+            icon: const Icon(Icons.refresh_rounded),
+          ),
+          const SizedBox(width: 4),
+        ],
+      ),
       floatingActionButton: FloatingActionButton.extended(
         onPressed: _addMain,
         icon: const Icon(Icons.add),
@@ -533,12 +607,36 @@ class _AccountGroupPageState extends State<AccountGroupPage> {
               child: ListView(
                 padding: const EdgeInsets.fromLTRB(14, 12, 14, 100),
                 children: [
-                  Text('حساب‌های معین',
-                      style: Theme.of(context)
-                          .textTheme
-                          .titleMedium
-                          ?.copyWith(fontWeight: FontWeight.w800)),
-                  const SizedBox(height: 8),
+                  Container(
+                    padding: const EdgeInsets.all(18),
+                    decoration: BoxDecoration(
+                      color: Theme.of(context).colorScheme.primary.withValues(alpha: .08),
+                      borderRadius: BorderRadius.circular(20),
+                      border: Border.all(
+                        color: Theme.of(context).colorScheme.primary.withValues(alpha: .16),
+                      ),
+                    ),
+                    child: Row(
+                      children: [
+                        Icon(Icons.account_tree_rounded,
+                            color: Theme.of(context).colorScheme.primary, size: 25),
+                        const SizedBox(width: 12),
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text('حساب‌های معین',
+                                  style: Theme.of(context).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w900)),
+                              const SizedBox(height: 3),
+                              Text('${mains.length} سرفصل معین تعریف‌شده',
+                                  style: Theme.of(context).textTheme.bodySmall),
+                            ],
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  const SizedBox(height: 14),
                   if (mains.isEmpty)
                     const Padding(
                       padding: EdgeInsets.all(24),
