@@ -231,6 +231,18 @@ class DarmaDatabase {
     }
   }
 
+  Future<void> _insertJournalEntries(
+      DatabaseExecutor txn, int transactionId, List<LedgerEntry> entries) async {
+    for (final entry in entries) {
+      await txn.insert('journal_entries', {
+        'transaction_id': transactionId,
+        'account_id': entry.accountId,
+        'debit': entry.debit,
+        'credit': entry.credit,
+      });
+    }
+  }
+
   Future<void> _validateAssetAccounts(
       DatabaseExecutor txn, List<int> ids) async {
     final placeholders = ids.map((_) => '?').join(',');
@@ -292,42 +304,20 @@ class DarmaDatabase {
         'created_at': DateTime.now().toIso8601String(),
       });
 
-      if (kind == 'income') {
-        await txn.insert('journal_entries', {
-          'transaction_id': id,
-          'account_id': financialId,
-          'debit': amount,
-          'credit': 0
-        });
-        await txn.insert('journal_entries', {
-          'transaction_id': id,
-          'account_id': categoryAccountId,
-          'debit': 0,
-          'credit': amount
-        });
-      } else {
-        await txn.insert('journal_entries', {
-          'transaction_id': id,
-          'account_id': categoryAccountId,
-          'debit': amount,
-          'credit': 0
-        });
-        if (fee > 0) {
-          final bankFee = await _bankFeeAccountId(txn);
-          await txn.insert('journal_entries', {
-            'transaction_id': id,
-            'account_id': bankFee,
-            'debit': fee,
-            'credit': 0
-          });
-        }
-        await txn.insert('journal_entries', {
-          'transaction_id': id,
-          'account_id': financialId,
-          'debit': 0,
-          'credit': amount + fee
-        });
-      }
+      final entries = kind == 'income'
+          ? TransactionJournal.income(
+              financialAccountId: financialId,
+              incomeAccountId: categoryAccountId,
+              amount: amount,
+            )
+          : TransactionJournal.expense(
+              financialAccountId: financialId,
+              expenseAccountId: categoryAccountId,
+              amount: amount,
+              fee: fee,
+              feeAccountId: fee > 0 ? await _bankFeeAccountId(txn) : 0,
+            );
+      await _insertJournalEntries(txn, id, entries);
 
       await _assertBalanced(txn, id);
     });
@@ -389,42 +379,20 @@ class DarmaDatabase {
       await txn.delete('journal_entries',
           where: 'transaction_id = ?', whereArgs: [transactionId]);
 
-      if (kind == 'income') {
-        await txn.insert('journal_entries', {
-          'transaction_id': transactionId,
-          'account_id': financialId,
-          'debit': amount,
-          'credit': 0
-        });
-        await txn.insert('journal_entries', {
-          'transaction_id': transactionId,
-          'account_id': categoryAccountId,
-          'debit': 0,
-          'credit': amount
-        });
-      } else {
-        await txn.insert('journal_entries', {
-          'transaction_id': transactionId,
-          'account_id': categoryAccountId,
-          'debit': amount,
-          'credit': 0
-        });
-        if (fee > 0) {
-          final bankFee = await _bankFeeAccountId(txn);
-          await txn.insert('journal_entries', {
-            'transaction_id': transactionId,
-            'account_id': bankFee,
-            'debit': fee,
-            'credit': 0
-          });
-        }
-        await txn.insert('journal_entries', {
-          'transaction_id': transactionId,
-          'account_id': financialId,
-          'debit': 0,
-          'credit': amount + fee
-        });
-      }
+      final entries = kind == 'income'
+          ? TransactionJournal.income(
+              financialAccountId: financialId,
+              incomeAccountId: categoryAccountId,
+              amount: amount,
+            )
+          : TransactionJournal.expense(
+              financialAccountId: financialId,
+              expenseAccountId: categoryAccountId,
+              amount: amount,
+              fee: fee,
+              feeAccountId: fee > 0 ? await _bankFeeAccountId(txn) : 0,
+            );
+      await _insertJournalEntries(txn, transactionId, entries);
 
       await _assertBalanced(txn, transactionId);
     });
@@ -455,27 +423,14 @@ class DarmaDatabase {
         'created_at': DateTime.now().toIso8601String(),
       });
 
-      await txn.insert('journal_entries', {
-        'transaction_id': id,
-        'account_id': fromAccountId,
-        'debit': 0,
-        'credit': amount + fee
-      });
-      await txn.insert('journal_entries', {
-        'transaction_id': id,
-        'account_id': toAccountId,
-        'debit': amount,
-        'credit': 0
-      });
-      if (fee > 0) {
-        final bankFee = await _bankFeeAccountId(txn);
-        await txn.insert('journal_entries', {
-          'transaction_id': id,
-          'account_id': bankFee,
-          'debit': fee,
-          'credit': 0
-        });
-      }
+      final entries = TransactionJournal.transfer(
+        fromAccountId: fromAccountId,
+        toAccountId: toAccountId,
+        amount: amount,
+        fee: fee,
+        feeAccountId: fee > 0 ? await _bankFeeAccountId(txn) : 0,
+      );
+      await _insertJournalEntries(txn, id, entries);
 
       await _assertBalanced(txn, id);
     });
@@ -515,27 +470,14 @@ class DarmaDatabase {
       await txn.delete('journal_entries',
           where: 'transaction_id = ?', whereArgs: [transactionId]);
 
-      await txn.insert('journal_entries', {
-        'transaction_id': transactionId,
-        'account_id': fromAccountId,
-        'debit': 0,
-        'credit': amount + fee
-      });
-      await txn.insert('journal_entries', {
-        'transaction_id': transactionId,
-        'account_id': toAccountId,
-        'debit': amount,
-        'credit': 0
-      });
-      if (fee > 0) {
-        final bankFee = await _bankFeeAccountId(txn);
-        await txn.insert('journal_entries', {
-          'transaction_id': transactionId,
-          'account_id': bankFee,
-          'debit': fee,
-          'credit': 0
-        });
-      }
+      final entries = TransactionJournal.transfer(
+        fromAccountId: fromAccountId,
+        toAccountId: toAccountId,
+        amount: amount,
+        fee: fee,
+        feeAccountId: fee > 0 ? await _bankFeeAccountId(txn) : 0,
+      );
+      await _insertJournalEntries(txn, transactionId, entries);
 
       await _assertBalanced(txn, transactionId);
     });
