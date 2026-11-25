@@ -170,6 +170,10 @@ class DarmaDatabase {
     return db.rawQuery('''
       SELECT a.id, a.name, a.parent_id, a.account_kind, a.bank_name,
         a.card_number, a.opening_balance,
+        COALESCE(a.opening_balance, 0) + COALESCE((
+          SELECT SUM(e.debit - e.credit) FROM journal_entries e
+          WHERE e.account_id = a.id
+        ), 0) AS balance,
         (SELECT COUNT(*) FROM accounts child WHERE child.parent_id = a.id) AS child_count
       FROM accounts a
       WHERE a.type = ? AND a.parent_id IS NOT NULL
