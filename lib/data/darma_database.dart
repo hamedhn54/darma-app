@@ -11,7 +11,7 @@ class DarmaDatabase {
     final root = await getDatabasesPath();
     _db = await openDatabase(
       p.join(root, 'darma.db'),
-      version: 4,
+      version: 5,
       onConfigure: (db) async {
         await db.execute('PRAGMA foreign_keys = ON');
       },
@@ -43,6 +43,12 @@ class DarmaDatabase {
         if (oldVersion < 3) {
           await _seedDefaultAccounts(db);
         }
+        if (oldVersion < 5) {
+          await db.execute('ALTER TABLE accounts ADD COLUMN account_kind TEXT');
+          await db.execute('ALTER TABLE accounts ADD COLUMN bank_name TEXT');
+          await db.execute('ALTER TABLE accounts ADD COLUMN card_number TEXT');
+          await db.execute('ALTER TABLE accounts ADD COLUMN opening_balance INTEGER NOT NULL DEFAULT 0');
+        }
       },
     );
     return _db!;
@@ -56,6 +62,10 @@ class DarmaDatabase {
         type TEXT NOT NULL CHECK(type IN ('asset','liability','income','expense')),
         parent_id INTEGER,
         is_system INTEGER NOT NULL DEFAULT 0,
+        account_kind TEXT,
+        bank_name TEXT,
+        card_number TEXT,
+        opening_balance INTEGER NOT NULL DEFAULT 0,
         created_at TEXT NOT NULL,
         FOREIGN KEY(parent_id) REFERENCES accounts(id)
       )
@@ -158,7 +168,8 @@ class DarmaDatabase {
   Future<List<Map<String, Object?>>> getTransactionAccounts(String type) async {
     final db = await database;
     return db.rawQuery('''
-      SELECT a.id, a.name, a.parent_id,
+      SELECT a.id, a.name, a.parent_id, a.account_kind, a.bank_name,
+        a.card_number, a.opening_balance,
         (SELECT COUNT(*) FROM accounts child WHERE child.parent_id = a.id) AS child_count
       FROM accounts a
       WHERE a.type = ? AND a.parent_id IS NOT NULL
@@ -239,6 +250,7 @@ class DarmaDatabase {
     required int amount,
     required String kind,
     required int categoryAccountId,
+    int? financialAccountId,
     int fee = 0,
   }) async {
     if (amount <= 0) throw ArgumentError('مبلغ باید بیشتر از صفر باشد');
@@ -271,10 +283,12 @@ class DarmaDatabase {
       if ((children ?? 0) > 0)
         throw StateError('برای ثبت تراکنش، تفصیلی این معین را انتخاب کنید');
 
-      final cash = Sqflite.firstIntValue(await txn.rawQuery(
+      final defaultCash = Sqflite.firstIntValue(await txn.rawQuery(
         "SELECT id FROM accounts WHERE name = 'کیف پول نقدی' AND type = 'asset' LIMIT 1",
       ));
-      if (cash == null) throw StateError('حساب کیف پول نقدی پیدا نشد');
+      final financialId = financialAccountId ?? defaultCash;
+      if (financialId == null) throw StateError('حساب مالی پیش‌فرض پیدا نشد');
+      await _validateAssetAccounts(txn, [financialId]);
 
       final id = await txn.insert('journal_transactions', {
         'title': title.trim(),
@@ -287,7 +301,7 @@ class DarmaDatabase {
       if (kind == 'income') {
         await txn.insert('journal_entries', {
           'transaction_id': id,
-          'account_id': cash,
+          'account_id': financialId,
           'debit': amount,
           'credit': 0
         });
@@ -315,7 +329,7 @@ class DarmaDatabase {
         }
         await txn.insert('journal_entries', {
           'transaction_id': id,
-          'account_id': cash,
+          'account_id': financialId,
           'debit': 0,
           'credit': amount + fee
         });
@@ -331,6 +345,7 @@ class DarmaDatabase {
     required int amount,
     required String kind,
     required int categoryAccountId,
+    int? financialAccountId,
     int fee = 0,
   }) async {
     if (title.trim().isEmpty) throw ArgumentError('شرح تراکنش الزامی است');
@@ -363,10 +378,12 @@ class DarmaDatabase {
       if ((children ?? 0) > 0)
         throw StateError('برای ثبت تراکنش، تفصیلی را انتخاب کنید');
 
-      final cash = Sqflite.firstIntValue(await txn.rawQuery(
+      final defaultCash = Sqflite.firstIntValue(await txn.rawQuery(
         "SELECT id FROM accounts WHERE name = 'کیف پول نقدی' AND type = 'asset' LIMIT 1",
       ));
-      if (cash == null) throw StateError('حساب کیف پول نقدی پیدا نشد');
+      final financialId = financialAccountId ?? defaultCash;
+      if (financialId == null) throw StateError('حساب مالی پیش‌فرض پیدا نشد');
+      await _validateAssetAccounts(txn, [financialId]);
 
       await txn.update(
         'journal_transactions',
@@ -381,7 +398,7 @@ class DarmaDatabase {
       if (kind == 'income') {
         await txn.insert('journal_entries', {
           'transaction_id': transactionId,
-          'account_id': cash,
+          'account_id': financialId,
           'debit': amount,
           'credit': 0
         });
@@ -409,7 +426,7 @@ class DarmaDatabase {
         }
         await txn.insert('journal_entries', {
           'transaction_id': transactionId,
-          'account_id': cash,
+          'account_id': financialId,
           'debit': 0,
           'credit': amount + fee
         });
@@ -547,7 +564,9 @@ class DarmaDatabase {
         (SELECT e.account_id FROM journal_entries e JOIN accounts a ON a.id = e.account_id WHERE e.transaction_id = t.id AND t.kind = 'transfer' AND a.type = 'asset' AND e.credit > 0 LIMIT 1) AS from_account_id,
         (SELECT a.name FROM journal_entries e JOIN accounts a ON a.id = e.account_id WHERE e.transaction_id = t.id AND t.kind = 'transfer' AND a.type = 'asset' AND e.credit > 0 LIMIT 1) AS from_account_name,
         (SELECT e.account_id FROM journal_entries e JOIN accounts a ON a.id = e.account_id WHERE e.transaction_id = t.id AND t.kind = 'transfer' AND a.type = 'asset' AND e.debit > 0 LIMIT 1) AS to_account_id,
-        (SELECT a.name FROM journal_entries e JOIN accounts a ON a.id = e.account_id WHERE e.transaction_id = t.id AND t.kind = 'transfer' AND a.type = 'asset' AND e.debit > 0 LIMIT 1) AS to_account_name
+        (SELECT a.name FROM journal_entries e JOIN accounts a ON a.id = e.account_id WHERE e.transaction_id = t.id AND t.kind = 'transfer' AND a.type = 'asset' AND e.debit > 0 LIMIT 1) AS to_account_name,
+        (SELECT e.account_id FROM journal_entries e JOIN accounts a ON a.id = e.account_id WHERE e.transaction_id = t.id AND a.type = 'asset' AND ((t.kind = 'income' AND e.debit > 0) OR (t.kind = 'expense' AND e.credit > 0)) LIMIT 1) AS financial_account_id,
+        (SELECT a.name FROM journal_entries e JOIN accounts a ON a.id = e.account_id WHERE e.transaction_id = t.id AND a.type = 'asset' AND ((t.kind = 'income' AND e.debit > 0) OR (t.kind = 'expense' AND e.credit > 0)) LIMIT 1) AS financial_account_name
       FROM journal_transactions t
       ORDER BY t.id DESC
     ''');
@@ -572,9 +591,10 @@ class DarmaDatabase {
     final db = await database;
     return db.rawQuery('''
       SELECT a.id, a.name, a.type, a.parent_id, a.is_system,
+        a.account_kind, a.bank_name, a.card_number, a.opening_balance,
         (SELECT root.id FROM accounts root WHERE root.type = a.type AND root.parent_id IS NULL LIMIT 1) AS root_id,
         CASE WHEN a.type IN ('asset','expense')
-          THEN COALESCE(SUM(e.debit - e.credit), 0)
+          THEN COALESCE(a.opening_balance, 0) + COALESCE(SUM(e.debit - e.credit), 0)
           ELSE COALESCE(SUM(e.credit - e.debit), 0)
         END AS balance,
         COUNT(e.id) AS entry_count
@@ -590,9 +610,22 @@ class DarmaDatabase {
     required String name,
     required String type,
     int? parentId,
+    String? accountKind,
+    String? bankName,
+    String? cardNumber,
+    int openingBalance = 0,
   }) async {
     final cleanName = name.trim();
     if (cleanName.isEmpty) throw ArgumentError('نام حساب الزامی است');
+    if (openingBalance < 0) throw ArgumentError('موجودی اولیه نمی‌تواند منفی باشد');
+    if (accountKind != null &&
+        !const ['bank', 'cash', 'wallet', 'other'].contains(accountKind)) {
+      throw ArgumentError('نوع حساب مالی نامعتبر است');
+    }
+    if (type != 'asset' &&
+        (accountKind != null || openingBalance != 0)) {
+      throw ArgumentError('اطلاعات حساب مالی فقط برای دارایی‌ها مجاز است');
+    }
     if (!const ['asset', 'liability', 'income', 'expense'].contains(type)) {
       throw ArgumentError('نوع حساب نامعتبر است');
     }
@@ -628,6 +661,10 @@ class DarmaDatabase {
         'type': type,
         'parent_id': targetParent,
         'is_system': 0,
+        'account_kind': accountKind,
+        'bank_name': bankName?.trim().isEmpty == true ? null : bankName?.trim(),
+        'card_number': cardNumber?.trim().isEmpty == true ? null : cardNumber?.trim(),
+        'opening_balance': openingBalance,
         'created_at': DateTime.now().toIso8601String(),
       });
     });
