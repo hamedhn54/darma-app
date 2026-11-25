@@ -734,7 +734,16 @@ class _DarmaHomeState extends State<DarmaHome> {
     if (selected == 'transfer') selected = 'expense';
     final accounts = await DarmaDatabase.instance.getAccountSummaries();
     final financialAccounts = (await DarmaDatabase.instance.getTransactionAccounts('asset'))
-        .where((a) => (a['child_count'] as num).toInt() == 0)
+        .where((a) {
+          final isLeaf = (a['child_count'] as num).toInt() == 0;
+          final kind = a['account_kind'] as String?;
+          final legacyFinancial = const {
+            'کیف پول نقدی',
+            'حساب بانکی',
+            'کیف پول الکترونیکی',
+          }.contains(a['name']);
+          return isLeaf && (kind != null || legacyFinancial);
+        })
         .toList();
     if (financialAccounts.isEmpty) {
       _notice('ابتدا یک حساب بانکی، صندوق یا کیف پول در بخش تعاریف ایجاد کنید.');
