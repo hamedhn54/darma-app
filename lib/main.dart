@@ -89,7 +89,8 @@ class _DarmaHomeState extends State<DarmaHome> {
   Future<void> _refresh() async {
     final db = await DarmaDatabase.instance.database;
     final rows = await db.rawQuery('''
-      SELECT a.id, a.name, a.type, COALESCE(SUM(e.debit - e.credit), 0) AS raw_balance
+      SELECT a.id, a.name, a.type,
+        COALESCE(a.opening_balance, 0) + COALESCE(SUM(e.debit - e.credit), 0) AS raw_balance
       FROM accounts a
       LEFT JOIN journal_entries e ON e.account_id = a.id
       WHERE a.type = 'asset' AND a.parent_id IS NOT NULL
@@ -731,6 +732,19 @@ class _DarmaHomeState extends State<DarmaHome> {
     String selected = kind ?? (existing?['kind'] as String? ?? 'expense');
     if (selected == 'transfer') selected = 'expense';
     final accounts = await DarmaDatabase.instance.getAccountSummaries();
+    final financialAccounts = (await DarmaDatabase.instance.getTransactionAccounts('asset'))
+        .where((a) => (a['child_count'] as num).toInt() == 0)
+        .toList();
+    if (financialAccounts.isEmpty) {
+      _notice('ابتدا یک حساب بانکی، صندوق یا کیف پول در بخش تعاریف ایجاد کنید.');
+      return;
+    }
+    int selectedFinancialAccountId =
+        existing?['financial_account_id'] as int? ??
+        financialAccounts.first['id'] as int;
+    if (!financialAccounts.any((a) => a['id'] == selectedFinancialAccountId)) {
+      selectedFinancialAccountId = financialAccounts.first['id'] as int;
+    }
     List<Map<String, Object?>> categoryAccounts(String type) => accounts
         .where((a) => a['type'] == type && a['parent_id'] == a['root_id'])
         .toList();
@@ -830,6 +844,34 @@ class _DarmaHomeState extends State<DarmaHome> {
                       ),
                       const SizedBox(height: 14),
                       DropdownButtonFormField<int>(
+                        value: selectedFinancialAccountId,
+                        isExpanded: true,
+                        decoration: InputDecoration(
+                          labelText: selected == 'income'
+                              ? 'واریز به حساب'
+                              : 'پرداخت از حساب',
+                          border: const OutlineInputBorder(),
+                        ),
+                        items: financialAccounts.map((a) {
+                          final bank = (a['bank_name'] as String?)?.trim();
+                          final label = bank == null || bank.isEmpty
+                              ? a['name'] as String
+                              : '${a['name']} • $bank';
+                          return DropdownMenuItem<int>(
+                            value: a['id'] as int,
+                            child: Text(label, overflow: TextOverflow.ellipsis),
+                          );
+                        }).toList(),
+                        onChanged: (value) {
+                          if (value != null) {
+                            setSheet(() => selectedFinancialAccountId = value);
+                          }
+                        },
+                        validator: (value) =>
+                            value == null ? 'حساب مالی را انتخاب کنید' : null,
+                      ),
+                      const SizedBox(height: 14),
+                      DropdownButtonFormField<int>(
                         key: ValueKey('main-$selectedMainId'),
                         value: selectedMainId,
                         isExpanded: true,
@@ -926,6 +968,7 @@ class _DarmaHomeState extends State<DarmaHome> {
                                 amount: _parseAmount(amount.text),
                                 kind: selected,
                                 categoryAccountId: selectedCategoryId,
+                                financialAccountId: selectedFinancialAccountId,
                                 fee: feeValue,
                               );
                             } else {
@@ -936,6 +979,7 @@ class _DarmaHomeState extends State<DarmaHome> {
                                 amount: _parseAmount(amount.text),
                                 kind: selected,
                                 categoryAccountId: selectedCategoryId,
+                                financialAccountId: selectedFinancialAccountId,
                                 fee: feeValue,
                               );
                             }
