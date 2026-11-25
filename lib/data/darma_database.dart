@@ -51,7 +51,26 @@ class DarmaDatabase {
           await db.execute('ALTER TABLE accounts ADD COLUMN opening_balance INTEGER NOT NULL DEFAULT 0');
         }
         if (oldVersion < 6) {
-          await db.execute("UPDATE accounts SET is_system = 1 WHERE type = 'expense' AND name = 'کارمزد بانکی'");
+          final expenseRootId = Sqflite.firstIntValue(await db.rawQuery(
+            "SELECT id FROM accounts WHERE type = 'expense' AND parent_id IS NULL LIMIT 1",
+          ));
+          if (expenseRootId != null) {
+            final feeCount = Sqflite.firstIntValue(await db.rawQuery(
+              "SELECT COUNT(*) FROM accounts WHERE type = 'expense' AND name = 'کارمزد بانکی'",
+            )) ?? 0;
+            if (feeCount == 0) {
+              await db.insert('accounts', {
+                'name': 'کارمزد بانکی',
+                'type': 'expense',
+                'parent_id': expenseRootId,
+                'is_system': 1,
+                'created_at': DateTime.now().toIso8601String(),
+              });
+            }
+          }
+          await db.execute(
+            "UPDATE accounts SET is_system = 1 WHERE type = 'expense' AND name = 'کارمزد بانکی'",
+          );
         }
       },
     );
