@@ -151,7 +151,7 @@ class _DarmaHomeState extends State<DarmaHome> {
         const SizedBox(width: 10),
         Expanded(child: _actionTile('پرداخت', Icons.north_east_rounded, Colors.redAccent, () => _newTransaction(kind: 'expense'))),
         const SizedBox(width: 10),
-        Expanded(child: _actionTile('انتقال', Icons.sync_alt_rounded, Colors.orange, () => _notice('ثبت انتقال در گام بعدی فعال می‌شود.'))),
+        Expanded(child: _actionTile('انتقال', Icons.sync_alt_rounded, Colors.orange, _newTransfer)),
       ]),
       const SizedBox(height: 24),
       Row(mainAxisAlignment: MainAxisAlignment.spaceBetween, children: [
@@ -181,18 +181,21 @@ class _DarmaHomeState extends State<DarmaHome> {
             itemBuilder: (context, index) {
               final transaction = _transactions[index];
               final income = transaction['kind'] == 'income';
+              final transfer = transaction['kind'] == 'transfer';
               return Card(
                 child: ListTile(
-                  onTap: () => _newTransaction(existing: transaction),
+                  onTap: transfer ? null : () => _newTransaction(existing: transaction),
                   leading: CircleAvatar(
-                    backgroundColor: (income ? Colors.green : Colors.red).withValues(alpha: 0.14),
-                    child: Icon(income ? Icons.south_west : Icons.north_east, color: income ? Colors.green : Colors.red),
+                    backgroundColor: (transfer ? Colors.orange : income ? Colors.green : Colors.red).withValues(alpha: 0.14),
+                    child: Icon(transfer ? Icons.sync_alt : income ? Icons.south_west : Icons.north_east, color: transfer ? Colors.orange : income ? Colors.green : Colors.red),
                   ),
                   title: Text(transaction['title'] as String, style: const TextStyle(fontWeight: FontWeight.w700)),
-                  subtitle: Text('${income ? 'دریافت' : 'پرداخت'} • ${transaction['parent_name'] ?? transaction['category_name']}\n${_moneyText((transaction['amount'] as num).toInt())} ریال'),
+                  subtitle: Text(transfer
+                      ? '${transaction['from_account_name'] ?? 'مبدأ'} ← ${transaction['to_account_name'] ?? 'مقصد'}\\n${_moneyText((transaction['amount'] as num).toInt())} ریال'
+                      : '${income ? 'دریافت' : 'پرداخت'} • ${transaction['parent_name'] ?? transaction['category_name']}\\n${_moneyText((transaction['amount'] as num).toInt())} ریال'),
                   trailing: PopupMenuButton<String>(
                     onSelected: (value) async {
-                      if (value == 'edit') {
+                      if (value == 'edit' && !transfer) {
                         await _newTransaction(existing: transaction);
                       } else if (value == 'delete') {
                         final confirm = await showDialog<bool>(
@@ -216,9 +219,9 @@ class _DarmaHomeState extends State<DarmaHome> {
                         }
                       }
                     },
-                    itemBuilder: (_) => const [
-                      PopupMenuItem(value: 'edit', child: Text('ویرایش')),
-                      PopupMenuItem(value: 'delete', child: Text('حذف')),
+                    itemBuilder: (_) => [
+                      if (!transfer) const PopupMenuItem(value: 'edit', child: Text('ویرایش')),
+                      const PopupMenuItem(value: 'delete', child: Text('حذف')),
                     ],
                   ),
                   isThreeLine: false,
@@ -255,6 +258,107 @@ class _DarmaHomeState extends State<DarmaHome> {
     for (final name in _themes.keys) ListTile(leading: CircleAvatar(backgroundColor: _themes[name]), title: Text(name), trailing: widget.themeName == name ? const Icon(Icons.check_circle) : null, onTap: () { widget.onThemeChanged(name); Navigator.pop(context); }),
     const SizedBox(height: 12),
   ]))));
+
+  Future<void> _newTransfer() async {
+    final allAssets = await DarmaDatabase.instance.getTransactionAccounts('asset');
+    final assets = allAssets.where((a) => (a['child_count'] as num).toInt() == 0).toList();
+    if (assets.length < 2) {
+      _notice('برای انتقال، حداقل دو حساب دارایی تعریف کنید.');
+      return;
+    }
+    int fromId = assets.first['id'] as int;
+    int toId = assets.firstWhere((a) => a['id'] != fromId)['id'] as int;
+    final title = TextEditingController(text: 'انتقال وجه');
+    final amount = TextEditingController();
+    final formKey = GlobalKey<FormState>();
+    final result = await showModalBottomSheet<bool>(
+      context: context,
+      isScrollControlled: true,
+      showDragHandle: true,
+      builder: (ctx) => StatefulBuilder(
+        builder: (ctx, setSheet) => Directionality(
+          textDirection: ui.TextDirection.rtl,
+          child: Padding(
+            padding: EdgeInsets.fromLTRB(20, 8, 20, MediaQuery.of(ctx).viewInsets.bottom + 24),
+            child: Form(
+              key: formKey,
+              child: SingleChildScrollView(
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    const Text('انتقال بین حساب‌ها', style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold)),
+                    const SizedBox(height: 16),
+                    DropdownButtonFormField<int>(
+                      value: fromId,
+                      isExpanded: true,
+                      decoration: const InputDecoration(labelText: 'حساب مبدأ (برداشت از)', border: OutlineInputBorder()),
+                      items: assets.map((a) => DropdownMenuItem<int>(value: a['id'] as int, child: Text(a['name'] as String))).toList(),
+                      onChanged: (v) {
+                        if (v == null) return;
+                        setSheet(() {
+                          fromId = v;
+                          if (toId == fromId) toId = assets.firstWhere((a) => a['id'] != fromId)['id'] as int;
+                        });
+                      },
+                    ),
+                    const SizedBox(height: 12),
+                    DropdownButtonFormField<int>(
+                      key: ValueKey('transfer-to-$fromId-$toId'),
+                      value: toId,
+                      isExpanded: true,
+                      decoration: const InputDecoration(labelText: 'حساب مقصد (واریز به)', border: OutlineInputBorder()),
+                      items: assets.where((a) => a['id'] != fromId).map((a) => DropdownMenuItem<int>(value: a['id'] as int, child: Text(a['name'] as String))).toList(),
+                      onChanged: (v) => setSheet(() { if (v != null) toId = v; }),
+                    ),
+                    const SizedBox(height: 12),
+                    TextFormField(
+                      controller: title,
+                      decoration: const InputDecoration(labelText: 'شرح انتقال', border: OutlineInputBorder()),
+                      validator: (v) => (v == null || v.trim().isEmpty) ? 'شرح را وارد کنید' : null,
+                    ),
+                    const SizedBox(height: 12),
+                    TextFormField(
+                      controller: amount,
+                      keyboardType: TextInputType.number,
+                      decoration: const InputDecoration(labelText: 'مبلغ به ریال', border: OutlineInputBorder()),
+                      validator: (v) => _parseAmount(v ?? '') <= 0 ? 'مبلغ معتبر وارد کنید' : null,
+                    ),
+                    const SizedBox(height: 18),
+                    FilledButton.icon(
+                      onPressed: () async {
+                        if (!formKey.currentState!.validate()) return;
+                        try {
+                          await DarmaDatabase.instance.addTransfer(
+                            title: title.text.trim(),
+                            amount: _parseAmount(amount.text),
+                            fromAccountId: fromId,
+                            toAccountId: toId,
+                          );
+                          if (ctx.mounted) Navigator.pop(ctx, true);
+                        } catch (error) {
+                          if (ctx.mounted) {
+                            ScaffoldMessenger.of(ctx).showSnackBar(
+                              SnackBar(content: Text(error.toString().replaceFirst('Exception: ', ''))),
+                            );
+                          }
+                        }
+                      },
+                      icon: const Icon(Icons.sync_alt),
+                      label: const Text('ثبت انتقال'),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+    title.dispose();
+    amount.dispose();
+    if (result == true) await _refresh();
+  }
 
   Future<void> _newTransaction({String? kind, Map<String, Object?>? existing}) async {
     String selected = kind ?? (existing?['kind'] as String? ?? 'expense');
