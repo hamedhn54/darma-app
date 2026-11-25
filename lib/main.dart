@@ -189,7 +189,7 @@ class _DarmaHomeState extends State<DarmaHome> {
                     child: Icon(income ? Icons.south_west : Icons.north_east, color: income ? Colors.green : Colors.red),
                   ),
                   title: Text(transaction['title'] as String, style: const TextStyle(fontWeight: FontWeight.w700)),
-                  subtitle: Text('${income ? 'دریافت' : 'پرداخت'} • ${transaction['parent_name'] ?? transaction['category_name']}'),
+                  subtitle: Text('${income ? 'دریافت' : 'پرداخت'} • ${transaction['parent_name'] ?? transaction['category_name']}\n${_moneyText((transaction['amount'] as num).toInt())} ریال'),
                   trailing: PopupMenuButton<String>(
                     onSelected: (value) async {
                       if (value == 'edit') {
@@ -267,7 +267,8 @@ class _DarmaHomeState extends State<DarmaHome> {
       return;
     }
     final oldCategoryId = existing?['category_account_id'] as int?;
-    final oldCategory = oldCategoryId == null ? null : accounts.where((a) => a['id'] == oldCategoryId).firstOrNull;
+    final oldCategoryMatches = oldCategoryId == null ? <Map<String, Object?>>[] : accounts.where((a) => a['id'] == oldCategoryId).toList();
+    final oldCategory = oldCategoryMatches.isEmpty ? null : oldCategoryMatches.first;
     int selectedMainId = oldCategory == null
         ? initialMains.first['id'] as int
         : (oldCategory['parent_id'] == oldCategory['root_id'] ? oldCategory['id'] as int : oldCategory['parent_id'] as int);
@@ -320,6 +321,7 @@ class _DarmaHomeState extends State<DarmaHome> {
                       ),
                       const SizedBox(height: 14),
                       DropdownButtonFormField<int>(
+                        key: ValueKey('main-$selectedMainId'),
                         value: selectedMainId,
                         isExpanded: true,
                         decoration: const InputDecoration(labelText: 'حساب معین', border: OutlineInputBorder()),
@@ -340,6 +342,7 @@ class _DarmaHomeState extends State<DarmaHome> {
                       if (details.isNotEmpty) ...[
                         const SizedBox(height: 12),
                         DropdownButtonFormField<int>(
+                          key: ValueKey('detail-$selectedMainId-$selectedDetailId'),
                           value: selectedDetailId,
                           isExpanded: true,
                           decoration: const InputDecoration(labelText: 'حساب تفصیلی', border: OutlineInputBorder()),
