@@ -100,6 +100,21 @@ class _AccountGroupPageState extends State<AccountGroupPage> {
       .replaceFirst('Bad state: ', '')
       .replaceFirst('Exception: ', '');
 
+  int? _parseInteger(String raw) {
+    const persian = '۰۱۲۳۴۵۶۷۸۹';
+    const arabic = '٠١٢٣٤٥٦٧٨٩';
+    var value = raw.trim();
+    for (var i = 0; i < 10; i++) {
+      value = value.replaceAll(persian[i], '$i').replaceAll(arabic[i], '$i');
+    }
+    value = value
+        .replaceAll(',', '')
+        .replaceAll('٬', '')
+        .replaceAll('،', '')
+        .replaceAll(' ', '');
+    return int.tryParse(value);
+  }
+
   void _message(String message) {
     if (mounted)
       ScaffoldMessenger.of(context)
@@ -237,8 +252,7 @@ class _AccountGroupPageState extends State<AccountGroupPage> {
                         helperText: 'در صورت نداشتن موجودی اولیه، صفر وارد کنید.',
                         border: OutlineInputBorder()),
                       validator: (value) {
-                        final normalized = (value ?? '').replaceAll(',', '').replaceAll('٬', '').trim();
-                        final parsed = int.tryParse(normalized);
+                        final parsed = _parseInteger(value ?? '');
                         return parsed == null || parsed < 0
                             ? 'موجودی اولیه معتبر وارد کنید' : null;
                       },
@@ -248,8 +262,7 @@ class _AccountGroupPageState extends State<AccountGroupPage> {
                       onPressed: () async {
                         if (!formKey.currentState!.validate()) return;
                         try {
-                          final openingValue = int.parse(
-                            opening.text.replaceAll(',', '').replaceAll('٬', '').trim());
+                          final openingValue = _parseInteger(opening.text)!;
                           await DarmaDatabase.instance.createAccount(
                             name: name.text.trim(),
                             type: widget.type,
