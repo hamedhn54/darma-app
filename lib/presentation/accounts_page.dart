@@ -373,7 +373,7 @@ class _AccountGroupPageState extends State<AccountGroupPage> {
                       keyboardType: TextInputType.number,
                       decoration: const InputDecoration(
                         labelText: 'موجودی اولیه به ریال',
-                        helperText: 'تغییر این مقدار، مانده حساب را نیز تغییر می‌دهد.',
+                        helperText: 'پس از ثبت گردش مالی، موجودی اولیه قابل تغییر نیست؛ برای اصلاح آن باید سند اصلاحی ثبت شود.',
                         border: OutlineInputBorder()),
                       validator: (value) {
                         final parsed = _parseInteger(value ?? '');
