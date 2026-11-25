@@ -368,6 +368,7 @@ class _DarmaHomeState extends State<DarmaHome> {
                           '${fee > 0 ? ' • کارمزد: ${_moneyText(fee)} ریال' : ''}'
                       : '${income ? 'دریافت' : 'پرداخت'} • '
                           '${transaction['parent_name'] ?? transaction['category_name']}\n'
+                          'حساب: ${transaction['financial_account_name'] ?? 'کیف پول نقدی'}\n'
                           '${_moneyText((transaction['amount'] as num).toInt())} ریال'
                           '${fee > 0 ? ' • کارمزد: ${_moneyText(fee)} ریال' : ''}';
                   return Card(
@@ -854,9 +855,12 @@ class _DarmaHomeState extends State<DarmaHome> {
                         ),
                         items: financialAccounts.map((a) {
                           final bank = (a['bank_name'] as String?)?.trim();
-                          final label = bank == null || bank.isEmpty
-                              ? a['name'] as String
-                              : '${a['name']} • $bank';
+                          final balance = (a['opening_balance'] as num?)?.toInt() ?? 0;
+                          final label = [
+                            a['name'] as String,
+                            if (bank != null && bank.isNotEmpty) bank,
+                            'مانده ${_moneyText(balance)}',
+                          ].join(' • ');
                           return DropdownMenuItem<int>(
                             value: a['id'] as int,
                             child: Text(label, overflow: TextOverflow.ellipsis),
