@@ -1022,6 +1022,60 @@ class _DarmaHomeState extends State<DarmaHome> {
     );
   }
 
+  Widget _transactionFormHero({
+    required String title,
+    required String subtitle,
+    required IconData icon,
+    required Color color,
+  }) {
+    final scheme = Theme.of(context).colorScheme;
+    return Container(
+      padding: const EdgeInsets.all(19),
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(23),
+        gradient: LinearGradient(
+          begin: Alignment.topRight,
+          end: Alignment.bottomLeft,
+          colors: [
+            color.withValues(alpha: .19),
+            scheme.surface,
+          ],
+        ),
+        border: Border.all(color: color.withValues(alpha: .32)),
+      ),
+      child: Row(
+        children: [
+          Container(
+            width: 52,
+            height: 52,
+            decoration: BoxDecoration(
+              color: color.withValues(alpha: .16),
+              borderRadius: BorderRadius.circular(17),
+            ),
+            child: Icon(icon, color: color, size: 27),
+          ),
+          const SizedBox(width: 14),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(title, style: const TextStyle(
+                  fontSize: 19, fontWeight: FontWeight.w900,
+                )),
+                const SizedBox(height: 5),
+                Text(subtitle, style: TextStyle(
+                  fontSize: 12, color: scheme.onSurfaceVariant,
+                )),
+              ],
+            ),
+          ),
+          Icon(Icons.verified_user_outlined,
+              color: color.withValues(alpha: .85), size: 21),
+        ],
+      ),
+    );
+  }
+
   Widget _transactionDateField(DateTime date, VoidCallback onTap) {
     return Card(
       margin: EdgeInsets.zero,
@@ -1072,6 +1126,11 @@ class _DarmaHomeState extends State<DarmaHome> {
       context: context,
       isScrollControlled: true,
       showDragHandle: true,
+      backgroundColor: Theme.of(context).colorScheme.surface,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(30)),
+      ),
+      clipBehavior: Clip.antiAlias,
       builder: (ctx) => StatefulBuilder(
         builder: (ctx, setSheet) => Directionality(
           textDirection: ui.TextDirection.rtl,
@@ -1085,12 +1144,13 @@ class _DarmaHomeState extends State<DarmaHome> {
                   mainAxisSize: MainAxisSize.min,
                   crossAxisAlignment: CrossAxisAlignment.stretch,
                   children: [
-                    Text(
-                      existing == null ? 'انتقال بین حساب‌ها' : 'ویرایش انتقال',
-                      style: const TextStyle(
-                          fontSize: 20, fontWeight: FontWeight.bold),
+                    _transactionFormHero(
+                      title: existing == null ? 'انتقال بین حساب‌ها' : 'ویرایش انتقال',
+                      subtitle: 'جابجایی امن وجه میان حساب‌های شما',
+                      icon: Icons.swap_horiz_rounded,
+                      color: const Color(0xFFE5A443),
                     ),
-                    const SizedBox(height: 16),
+                    const SizedBox(height: 18),
                     _transactionDateField(transactionDate, () async {
                       final picked = await _showJalaliDatePicker(transactionDate);
                       if (picked != null) {
@@ -1316,6 +1376,11 @@ class _DarmaHomeState extends State<DarmaHome> {
       context: context,
       isScrollControlled: true,
       showDragHandle: true,
+      backgroundColor: Theme.of(context).colorScheme.surface,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(30)),
+      ),
+      clipBehavior: Clip.antiAlias,
       builder: (ctx) => StatefulBuilder(
         builder: (ctx, setSheet) {
           final mains = categoryAccounts(selected);
@@ -1334,12 +1399,21 @@ class _DarmaHomeState extends State<DarmaHome> {
                     mainAxisSize: MainAxisSize.min,
                     crossAxisAlignment: CrossAxisAlignment.stretch,
                     children: [
-                      Text(
-                        existing == null ? 'تراکنش جدید' : 'ویرایش تراکنش',
-                        style: const TextStyle(
-                            fontSize: 20, fontWeight: FontWeight.bold),
+                      _transactionFormHero(
+                        title: existing == null
+                            ? (selected == 'income' ? 'ثبت دریافت' : 'ثبت پرداخت')
+                            : (selected == 'income' ? 'ویرایش دریافت' : 'ویرایش پرداخت'),
+                        subtitle: selected == 'income'
+                            ? 'ثبت دقیق ورودی‌های مالی شما'
+                            : 'مدیریت پرداخت‌ها و هزینه‌ها',
+                        icon: selected == 'income'
+                            ? Icons.south_west_rounded
+                            : Icons.north_east_rounded,
+                        color: selected == 'income'
+                            ? const Color(0xFF2EAD83)
+                            : const Color(0xFFE16B70),
                       ),
-                      const SizedBox(height: 14),
+                      const SizedBox(height: 18),
                       SegmentedButton<String>(
                         segments: const [
                           ButtonSegment(
