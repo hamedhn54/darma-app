@@ -209,11 +209,79 @@ class _ReportsPageState extends State<ReportsPage> {
   @override Widget build(BuildContext context){
     final net=income-expense;
     return RefreshIndicator(onRefresh:load,child:ListView(padding:const EdgeInsets.fromLTRB(14,12,14,110),children:[
-      Row(children:[Container(padding:const EdgeInsets.all(12),decoration:BoxDecoration(color:blue.withValues(alpha:.14),borderRadius:BorderRadius.circular(15)),child:const Icon(Icons.query_stats,color:blue,size:26)),
-        const SizedBox(width:10),Expanded(child:Column(crossAxisAlignment:CrossAxisAlignment.start,children:[
-          Text('مرکز گزارش‌های مالی',style:Theme.of(context).textTheme.titleLarge?.copyWith(fontWeight:FontWeight.w900)),
-          const Text('تحلیل درآمد، هزینه و جریان مالی',style:TextStyle(fontSize:11,color:Colors.grey))])),
-        IconButton(onPressed:load,icon:const Icon(Icons.refresh))]),
+      Container(
+        padding: const EdgeInsets.all(20),
+        decoration: BoxDecoration(
+          borderRadius: BorderRadius.circular(26),
+          gradient: LinearGradient(
+            begin: Alignment.topRight,
+            end: Alignment.bottomLeft,
+            colors: [
+              Theme.of(context).colorScheme.primary,
+              Theme.of(context).colorScheme.secondary,
+              Theme.of(context).colorScheme.primary.withValues(alpha: .82),
+            ],
+          ),
+          boxShadow: [
+            BoxShadow(
+              color: Theme.of(context).colorScheme.primary.withValues(alpha: .18),
+              blurRadius: 22,
+              offset: const Offset(0, 9),
+            ),
+          ],
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                Container(
+                  width: 48,
+                  height: 48,
+                  decoration: BoxDecoration(
+                    color: Colors.white.withValues(alpha: .16),
+                    borderRadius: BorderRadius.circular(16),
+                    border: Border.all(color: Colors.white.withValues(alpha: .18)),
+                  ),
+                  child: const Icon(Icons.query_stats_rounded,
+                      color: Colors.white, size: 27),
+                ),
+                const SizedBox(width: 12),
+                const Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text('مرکز تحلیل مالی دارما',
+                          style: TextStyle(
+                              color: Colors.white,
+                              fontSize: 18,
+                              fontWeight: FontWeight.w900)),
+                      SizedBox(height: 4),
+                      Text('تصویر دقیق‌تری از عملکرد مالی خود داشته باشید',
+                          style: TextStyle(color: Colors.white70, fontSize: 10)),
+                    ],
+                  ),
+                ),
+                IconButton(
+                  tooltip: 'به‌روزرسانی گزارش',
+                  onPressed: load,
+                  icon: const Icon(Icons.refresh_rounded, color: Colors.white),
+                ),
+              ],
+            ),
+            const SizedBox(height: 18),
+            Row(
+              children: [
+                _reportHeroValue('درآمد', money(income), green),
+                const SizedBox(width: 8),
+                _reportHeroValue('هزینه', money(expense), red),
+                const SizedBox(width: 8),
+                _reportHeroValue('تراکنش', fa(count.toString()), Colors.white),
+              ],
+            ),
+          ],
+        ),
+      ),
       const SizedBox(height:14),
       card('بازه گزارش',Icons.calendar_month,Column(crossAxisAlignment:CrossAxisAlignment.stretch,children:[
         Wrap(spacing:6,runSpacing:6,children:[
@@ -272,9 +340,53 @@ class _ReportsPageState extends State<ReportsPage> {
   }
 
   Widget chip(String label,String p)=>ChoiceChip(label:Text(label),selected:period==p,onSelected:(_)=>setPeriod(p));
-  Widget card(String title,IconData icon,Widget child)=>Card(clipBehavior:Clip.antiAlias,child:Padding(padding:const EdgeInsets.all(14),child:Column(crossAxisAlignment:CrossAxisAlignment.stretch,children:[
-    Row(children:[Icon(icon,color:blue,size:19),const SizedBox(width:8),Expanded(child:Text(title,style:const TextStyle(fontWeight:FontWeight.w900,fontSize:14)))]),
-    const SizedBox(height:13),child])));
+  Widget card(String title,IconData icon,Widget child)=>Card(
+    clipBehavior:Clip.antiAlias,
+    child:Padding(
+      padding:const EdgeInsets.all(15),
+      child:Column(
+        crossAxisAlignment:CrossAxisAlignment.stretch,
+        children:[
+          Row(children:[
+            Container(
+              width:34,height:34,
+              decoration:BoxDecoration(
+                color:Theme.of(context).colorScheme.primary.withValues(alpha:.12),
+                borderRadius:BorderRadius.circular(11),
+              ),
+              child:Icon(icon,color:Theme.of(context).colorScheme.primary,size:19),
+            ),
+            const SizedBox(width:10),
+            Expanded(child:Text(title,style:const TextStyle(fontWeight:FontWeight.w900,fontSize:14))),
+          ]),
+          const SizedBox(height:14),
+          child,
+        ],
+      ),
+    ),
+  );
+  Widget _reportHeroValue(String label,String value,Color color)=>Expanded(
+    child:Container(
+      padding:const EdgeInsets.symmetric(horizontal:9,vertical:10),
+      decoration:BoxDecoration(
+        color:Colors.white.withValues(alpha:.14),
+        borderRadius:BorderRadius.circular(14),
+        border:Border.all(color:Colors.white.withValues(alpha:.16)),
+      ),
+      child:Column(
+        crossAxisAlignment:CrossAxisAlignment.start,
+        children:[
+          Text(label,style:const TextStyle(color:Colors.white70,fontSize:9)),
+          const SizedBox(height:5),
+          FittedBox(
+            fit:BoxFit.scaleDown,
+            alignment:Alignment.centerRight,
+            child:Text(value,style:TextStyle(color:color,fontSize:14,fontWeight:FontWeight.w900)),
+          ),
+        ],
+      ),
+    ),
+  );
   Widget metric(String title,int value,Color color,IconData icon)=>Container(padding:const EdgeInsets.all(12),decoration:BoxDecoration(
     borderRadius:BorderRadius.circular(18),gradient:LinearGradient(colors:[color.withValues(alpha:.18),color.withValues(alpha:.05)]),border:Border.all(color:color.withValues(alpha:.2))),
     child:Column(crossAxisAlignment:CrossAxisAlignment.start,mainAxisAlignment:MainAxisAlignment.spaceBetween,children:[
