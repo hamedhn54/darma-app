@@ -683,6 +683,64 @@ class DarmaDatabase {
     });
   }
 
+  Future<void> updateFinancialAccount({
+    required int id,
+    required String name,
+    required String accountKind,
+    String? bankName,
+    String? cardNumber,
+    required int openingBalance,
+  }) async {
+    final cleanName = name.trim();
+    if (cleanName.isEmpty) throw ArgumentError('نام حساب الزامی است');
+    if (openingBalance < 0) {
+      throw ArgumentError('موجودی اولیه نمی‌تواند منفی باشد');
+    }
+    if (!const ['bank', 'cash', 'wallet', 'other'].contains(accountKind)) {
+      throw ArgumentError('نوع حساب مالی نامعتبر است');
+    }
+    if (accountKind == 'bank' && (bankName == null || bankName.trim().isEmpty)) {
+      throw ArgumentError('نام بانک را وارد کنید');
+    }
+    final db = await database;
+    await db.transaction((txn) async {
+      final rows = await txn.query(
+        'accounts',
+        where: 'id = ?',
+        whereArgs: [id],
+        limit: 1,
+      );
+      if (rows.isEmpty ||
+          rows.first['type'] != 'asset' ||
+          rows.first['parent_id'] == null ||
+          rows.first['is_system'] == 1) {
+        throw StateError('این حساب مالی قابل ویرایش نیست');
+      }
+      final duplicate = Sqflite.firstIntValue(await txn.rawQuery(
+        'SELECT COUNT(*) FROM accounts WHERE name = ? AND type = ? AND parent_id = ? AND id != ?',
+        [cleanName, 'asset', rows.first['parent_id'], id],
+      ));
+      if ((duplicate ?? 0) > 0) {
+        throw StateError('حسابی با این نام در این گروه وجود دارد');
+      }
+      await txn.update(
+        'accounts',
+        {
+          'name': cleanName,
+          'account_kind': accountKind,
+          'bank_name': accountKind == 'bank' ? bankName!.trim() : null,
+          'card_number': accountKind == 'bank' &&
+                  cardNumber?.trim().isNotEmpty == true
+              ? cardNumber!.trim()
+              : null,
+          'opening_balance': openingBalance,
+        },
+        where: 'id = ?',
+        whereArgs: [id],
+      );
+    });
+  }
+
   Future<void> renameAccount({required int id, required String name}) async {
     final cleanName = name.trim();
     if (cleanName.isEmpty) throw ArgumentError('نام حساب الزامی است');
