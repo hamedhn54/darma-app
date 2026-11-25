@@ -160,9 +160,9 @@ class _DarmaHomeState extends State<DarmaHome> {
       ]),
       if (_recent.isEmpty) const _EmptyState(text: 'هنوز تراکنشی ثبت نشده است')
       else ..._recent.map((r) => Card(child: ListTile(
-        leading: CircleAvatar(child: Icon(r['kind'] == 'income' ? Icons.south_west : Icons.north_east)),
+        leading: CircleAvatar(child: Icon(r['kind'] == 'transfer' ? Icons.sync_alt : r['kind'] == 'income' ? Icons.south_west : Icons.north_east)),
         title: Text(r['title'] as String),
-        subtitle: Text((r['kind'] == 'income' ? 'دریافت' : 'پرداخت')),
+        subtitle: Text(r['kind'] == 'transfer' ? 'انتقال وجه' : r['kind'] == 'income' ? 'دریافت' : 'پرداخت'),
         trailing: Text('${_moneyText((r['amount'] as num).toInt())} ریال', style: const TextStyle(fontWeight: FontWeight.bold)),
       ))),
     ]),
@@ -191,8 +191,8 @@ class _DarmaHomeState extends State<DarmaHome> {
                   ),
                   title: Text(transaction['title'] as String, style: const TextStyle(fontWeight: FontWeight.w700)),
                   subtitle: Text(transfer
-                      ? '${transaction['from_account_name'] ?? 'مبدأ'} ← ${transaction['to_account_name'] ?? 'مقصد'}\\n${_moneyText((transaction['amount'] as num).toInt())} ریال'
-                      : '${income ? 'دریافت' : 'پرداخت'} • ${transaction['parent_name'] ?? transaction['category_name']}\\n${_moneyText((transaction['amount'] as num).toInt())} ریال'),
+                      ? '${transaction['from_account_name'] ?? 'مبدأ'} ← ${transaction['to_account_name'] ?? 'مقصد'}\n${_moneyText((transaction['amount'] as num).toInt())} ریال'
+                      : '${income ? 'دریافت' : 'پرداخت'} • ${transaction['parent_name'] ?? transaction['category_name']}\n${_moneyText((transaction['amount'] as num).toInt())} ریال'),
                   trailing: PopupMenuButton<String>(
                     onSelected: (value) async {
                       if (value == 'edit' && !transfer) {
