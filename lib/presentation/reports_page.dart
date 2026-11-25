@@ -19,6 +19,13 @@ class _ReportsPageState extends State<ReportsPage> {
   String? error;
   Map<String,Object?> report = {};
   List<Map<String,Object?>> accounts = [];
+  DateTime compareAStart = DateTime(DateTime.now().year, DateTime.now().month - 1, 1);
+  DateTime compareAEnd = DateTime(DateTime.now().year, DateTime.now().month, 1);
+  DateTime compareBStart = DateTime(DateTime.now().year, DateTime.now().month, 1);
+  DateTime compareBEnd = DateTime(DateTime.now().year, DateTime.now().month + 1, 1);
+  Map<String,Object?>? comparisonA;
+  Map<String,Object?>? comparisonB;
+  bool comparing = false;
   static const green = Color(0xFF36C982), red = Color(0xFFFF6577), blue = Color(0xFF6D9EFF);
   String fa(String s) {
     const a='0123456789', b='۰۱۲۳۴۵۶۷۸۹';
@@ -49,6 +56,125 @@ class _ReportsPageState extends State<ReportsPage> {
     });
     load();
   }
+  Future<DateTime?> _pickJalaliDate(DateTime initialDate) async {
+    final initial = Jalali.fromDateTime(initialDate);
+    return showModalBottomSheet<DateTime>(
+      context: context, isScrollControlled: true, showDragHandle: true,
+      builder: (sheetContext) {
+        var year = initial.year, month = initial.month, selectedDay = initial.day;
+        const names = ['فروردین','اردیبهشت','خرداد','تیر','مرداد','شهریور','مهر','آبان','آذر','دی','بهمن','اسفند'];
+        return StatefulBuilder(builder: (context, setSheet) {
+          final first = Jalali(year, month, 1).toDateTime();
+          final length = Jalali(year, month, 1).monthLength;
+          selectedDay = selectedDay.clamp(1, length);
+          final cells = <int?>[...List<int?>.filled((first.weekday + 1) % 7, null), ...List<int>.generate(length, (i)=>i+1)];
+          while(cells.length % 7 != 0){cells.add(null);}
+          return Directionality(textDirection: TextDirection.rtl, child: SafeArea(child: Padding(
+            padding: const EdgeInsets.fromLTRB(16,8,16,20),
+            child: Column(mainAxisSize: MainAxisSize.min, children:[
+              Row(mainAxisAlignment: MainAxisAlignment.spaceBetween,children:[
+                IconButton(onPressed:()=>setSheet((){if(month==1){month=12;year--;}else{month--;}}),icon:const Icon(Icons.chevron_right)),
+                Text('${names[month-1]} ${fa(year.toString())}',style:const TextStyle(fontWeight:FontWeight.bold)),
+                IconButton(onPressed:()=>setSheet((){if(month==12){month=1;year++;}else{month++;}}),icon:const Icon(Icons.chevron_left)),
+              ]),
+              Row(children:['ش','ی','د','س','چ','پ','ج'].map((x)=>Expanded(child:Center(child:Text(x,style:const TextStyle(fontWeight:FontWeight.bold)))).toList()),
+              const SizedBox(height:8),
+              GridView.builder(shrinkWrap:true,physics:const NeverScrollableScrollPhysics(),itemCount:cells.length,
+                gridDelegate:const SliverGridDelegateWithFixedCrossAxisCount(crossAxisCount:7),
+                itemBuilder:(context,index){final day=cells[index];if(day==null)return const SizedBox.shrink();
+                  final active=day==selectedDay;
+                  return InkWell(onTap:()=>setSheet(()=>selectedDay=day),child:Container(
+                    margin:const EdgeInsets.all(3),decoration:BoxDecoration(color:active?Theme.of(context).colorScheme.primary:null,shape:BoxShape.circle),
+                    alignment:Alignment.center,child:Text(fa(day.toString()),style:TextStyle(color:active?Theme.of(context).colorScheme.onPrimary:null,fontWeight:active?FontWeight.bold:null))));
+                }),
+              const SizedBox(height:10),
+              FilledButton(onPressed:()=>Navigator.pop(sheetContext,Jalali(year,month,selectedDay).toDateTime()),child:const Text('تأیید تاریخ')),
+            ]),
+          )));
+        });
+      },
+    );
+  }
+
+  Future<void> _chooseCompareDate(int periodIndex, bool isStart) async {
+    final current = periodIndex == 1 ? (isStart ? compareAStart : compareAEnd) : (isStart ? compareBStart : compareBEnd.subtract(const Duration(days:1)));
+    final picked = await _pickJalaliDate(current);
+    if(picked==null)return;
+    setState((){
+      final value=DateTime(picked.year,picked.month,picked.day);
+      if(periodIndex==1){if(isStart){compareAStart=value;}else{compareAEnd=value.add(const Duration(days:1));}}
+      else {if(isStart){compareBStart=value;}else{compareBEnd=value.add(const Duration(days:1));}}
+      comparisonA=null; comparisonB=null;
+    });
+  }
+
+  Future<void> _runComparison() async {
+    if(!compareAStart.isBefore(compareAEnd) || !compareBStart.isBefore(compareBEnd)){
+      setState(()=>error='تاریخ شروع هر بازه باید قبل از تاریخ پایان باشد'); return;
+    }
+    setState(()=>comparing=true);
+    try{
+      final a=await DarmaDatabase.instance.getFinancialReport(startDate:compareAStart,endDate:compareAEnd,level:level,filterType:kind,selectedAccountId:accountId);
+      final b=await DarmaDatabase.instance.getFinancialReport(startDate:compareBStart,endDate:compareBEnd,level:level,filterType:kind,selectedAccountId:accountId);
+      if(mounted)setState(()=>{comparisonA=a,comparisonB=b,comparing=false,error=null});
+    }catch(e){if(mounted)setState(()=>{comparing=false,error=e.toString()});}
+  }
+
+  int _value(Map<String,Object?>? data,String key)=>(data?[key] as num?)?.toInt()??0;
+  int _days(DateTime start,DateTime end)=>end.difference(start).inDays.clamp(1,1000000);
+  String _periodLabel(DateTime start,DateTime exclusiveEnd)=>'${jalali(start)} تا ${jalali(exclusiveEnd.subtract(const Duration(days:1)))}';
+
+  Widget _comparisonCard(){
+    final a=comparisonA,b=comparisonB;
+    Widget dateChoice(String label,int index,bool startDate,DateTime date){
+      return OutlinedButton.icon(onPressed:()=>_chooseCompareDate(index,startDate),
+        icon:const Icon(Icons.calendar_month,size:16),label:Text('$label: ${jalali(startDate?date:date.subtract(const Duration(days:1)))}',style:const TextStyle(fontSize:11)));
+    }
+    Widget periodBox(String title,int index,DateTime from,DateTime to){
+      return Container(padding:const EdgeInsets.all(10),decoration:BoxDecoration(color:Theme.of(context).colorScheme.surfaceContainerHighest.withValues(alpha:.55),borderRadius:BorderRadius.circular(14)),child:Column(crossAxisAlignment:CrossAxisAlignment.stretch,children:[
+        Text(title,style:const TextStyle(fontWeight:FontWeight.bold)),const SizedBox(height:6),
+        dateChoice('از',index,true,from),dateChoice('تا',index,false,to)
+      ]));
+    }
+    Widget metricCompare(String title,String key){
+      final av=_value(a,key),bv=_value(b,key),delta=bv-av;
+      final pct=av==0?(bv==0?0.0:null):(delta/av.abs()*100);
+      final color=delta>0?green:delta<0?red:blue;
+      return Padding(padding:const EdgeInsets.symmetric(vertical:7),child:Row(children:[
+        Expanded(child:Text(title,style:const TextStyle(fontSize:12,fontWeight:FontWeight.w600))),
+        Expanded(child:Text(money(av),textAlign:TextAlign.center,style:const TextStyle(fontSize:11))),
+        Expanded(child:Text(money(bv),textAlign:TextAlign.center,style:const TextStyle(fontSize:11))),
+        Expanded(child:Column(crossAxisAlignment:CrossAxisAlignment.end,children:[
+          Text('${delta>0?'+':''}${money(delta)}',style:TextStyle(fontSize:11,fontWeight:FontWeight.bold,color:color)),
+          Text(pct==null?'—':'${pct>0?'+':''}${pct.toStringAsFixed(1)}٪',style:TextStyle(fontSize:9,color:color))
+        ]))
+      ]));
+    }
+    final aDays=_days(compareAStart,compareAEnd),bDays=_days(compareBStart,compareBEnd);
+    return card('مقایسه دوره‌ای',Icons.compare_arrows,Column(crossAxisAlignment:CrossAxisAlignment.stretch,children:[
+      const Text('دو بازه مستقل را انتخاب کن؛ دارما اختلاف مبلغ، درصد تغییر و میانگین روزانه را محاسبه می‌کند.',style:TextStyle(fontSize:11,color:Colors.grey)),
+      const SizedBox(height:10),
+      periodBox('دوره اول',1,compareAStart,compareAEnd),
+      const SizedBox(height:8),periodBox('دوره دوم',2,compareBStart,compareBEnd),
+      const SizedBox(height:10),
+      FilledButton.icon(onPressed:comparing?null:_runComparison,icon:comparing?const SizedBox(width:16,height:16,child:CircularProgressIndicator(strokeWidth:2)):const Icon(Icons.analytics_outlined),label:const Text('مقایسه دو دوره')),
+      if(a!=null&&b!=null)...[
+        const SizedBox(height:12),
+        const Row(children:[Expanded(child:Text('شاخص',style:TextStyle(fontWeight:FontWeight.bold,fontSize:11))),Expanded(child:Text('دوره اول',textAlign:TextAlign.center,style:TextStyle(fontWeight:FontWeight.bold,fontSize:10))),Expanded(child:Text('دوره دوم',textAlign:TextAlign.center,style:TextStyle(fontWeight:FontWeight.bold,fontSize:10))),Expanded(child:Text('اختلاف / تغییر',textAlign:TextAlign.end,style:TextStyle(fontWeight:FontWeight.bold,fontSize:10)))]),
+        const Divider(),
+        metricCompare('درآمد','income'),metricCompare('هزینه','expense'),
+        metricCompare('خالص جریان نقدی','net'),
+        metricCompare('تعداد تراکنش','transaction_count'),
+        const Divider(),
+        Text('میانگین روزانه دوره اول: درآمد ${money((_value(a,'income')/aDays).round())} ریال • هزینه ${money((_value(a,'expense')/aDays).round())} ریال',style:const TextStyle(fontSize:10)),
+        const SizedBox(height:4),
+        Text('میانگین روزانه دوره دوم: درآمد ${money((_value(b,'income')/bDays).round())} ریال • هزینه ${money((_value(b,'expense')/bDays).round())} ریال',style:const TextStyle(fontSize:10)),
+        const SizedBox(height:8),
+        Text('مبنای مقایسه: سطح $level • نوع $kind • ${accountId==null?'همه حساب‌ها':'حساب انتخاب‌شده'}',style:const TextStyle(fontSize:10,color:Colors.grey)),
+      ]
+    ]));
+  }
+
   int get income=>(report['income'] as num?)?.toInt()??0;
   int get expense=>(report['expense'] as num?)?.toInt()??0;
   int get count=>(report['transaction_count'] as num?)?.toInt()??0;
@@ -74,6 +200,8 @@ class _ReportsPageState extends State<ReportsPage> {
         const SizedBox(height:8),
         Text('${jalali(start)} تا ${jalali(end.subtract(const Duration(days:1)))}',textAlign:TextAlign.center,style:TextStyle(color:Theme.of(context).colorScheme.primary,fontWeight:FontWeight.bold))
       ])),
+      const SizedBox(height:10),
+      _comparisonCard(),
       const SizedBox(height:10),
       card('تنظیمات تحلیل',Icons.tune,Column(crossAxisAlignment:CrossAxisAlignment.stretch,children:[
         const Text('سطح گزارش',style:TextStyle(fontWeight:FontWeight.bold)),const SizedBox(height:6),
