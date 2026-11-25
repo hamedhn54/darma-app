@@ -198,7 +198,7 @@ class DarmaDatabase {
     return db.rawQuery('''
       SELECT t.id, t.title, t.amount, t.kind, t.note, t.created_at,
         e.account_id AS category_account_id, a.name AS category_name,
-        p.name AS parent_name
+        CASE WHEN p.parent_id IS NULL THEN a.name ELSE p.name END AS parent_name
       FROM journal_transactions t
       JOIN journal_entries e ON e.transaction_id = t.id
       JOIN accounts a ON a.id = e.account_id AND a.type = t.kind
