@@ -197,14 +197,85 @@ class DarmaDatabase {
     final db = await database;
     return db.rawQuery('''
       SELECT t.id, t.title, t.amount, t.kind, t.note, t.created_at,
-        e.account_id AS category_account_id, a.name AS category_name,
-        CASE WHEN p.parent_id IS NULL THEN a.name ELSE p.name END AS parent_name
+        (SELECT e.account_id FROM journal_entries e
+          JOIN accounts a ON a.id = e.account_id
+          WHERE e.transaction_id = t.id AND a.type = t.kind
+          LIMIT 1) AS category_account_id,
+        (SELECT a.name FROM journal_entries e
+          JOIN accounts a ON a.id = e.account_id
+          WHERE e.transaction_id = t.id AND a.type = t.kind
+          LIMIT 1) AS category_name,
+        (SELECT CASE WHEN p.parent_id IS NULL THEN a.name ELSE p.name END
+          FROM journal_entries e
+          JOIN accounts a ON a.id = e.account_id
+          LEFT JOIN accounts p ON p.id = a.parent_id
+          WHERE e.transaction_id = t.id AND a.type = t.kind
+          LIMIT 1) AS parent_name,
+        (SELECT e.account_id FROM journal_entries e
+          JOIN accounts a ON a.id = e.account_id
+          WHERE e.transaction_id = t.id AND t.kind = 'transfer'
+            AND a.type = 'asset' AND e.credit > 0
+          LIMIT 1) AS from_account_id,
+        (SELECT a.name FROM journal_entries e
+          JOIN accounts a ON a.id = e.account_id
+          WHERE e.transaction_id = t.id AND t.kind = 'transfer'
+            AND a.type = 'asset' AND e.credit > 0
+          LIMIT 1) AS from_account_name,
+        (SELECT e.account_id FROM journal_entries e
+          JOIN accounts a ON a.id = e.account_id
+          WHERE e.transaction_id = t.id AND t.kind = 'transfer'
+            AND a.type = 'asset' AND e.debit > 0
+          LIMIT 1) AS to_account_id,
+        (SELECT a.name FROM journal_entries e
+          JOIN accounts a ON a.id = e.account_id
+          WHERE e.transaction_id = t.id AND t.kind = 'transfer'
+            AND a.type = 'asset' AND e.debit > 0
+          LIMIT 1) AS to_account_name
       FROM journal_transactions t
-      JOIN journal_entries e ON e.transaction_id = t.id
-      JOIN accounts a ON a.id = e.account_id AND a.type = t.kind
-      LEFT JOIN accounts p ON p.id = a.parent_id
       ORDER BY t.id DESC
     ''');
+  }
+
+  Future<void> addTransfer({
+    required String title,
+    required int amount,
+    required int fromAccountId,
+    required int toAccountId,
+  }) async {
+    if (title.trim().isEmpty) throw ArgumentError('شرح انتقال الزامی است');
+    if (amount <= 0) throw ArgumentError('مبلغ باید بیشتر از صفر باشد');
+    if (fromAccountId == toAccountId) throw ArgumentError('حساب مبدأ و مقصد باید متفاوت باشند');
+    final db = await database;
+    await db.transaction((txn) async {
+      final accounts = await txn.rawQuery('''
+        SELECT a.id FROM accounts a
+        WHERE a.id IN (?, ?) AND a.type = 'asset'
+          AND a.parent_id IS NOT NULL
+          AND NOT EXISTS (SELECT 1 FROM accounts c WHERE c.parent_id = a.id)
+      ''', [fromAccountId, toAccountId]);
+      if (accounts.length != 2) throw StateError('حساب مبدأ یا مقصد معتبر نیست');
+      final id = await txn.insert('journal_transactions', {
+        'title': title.trim(),
+        'amount': amount,
+        'kind': 'transfer',
+        'created_at': DateTime.now().toIso8601String(),
+      });
+      await txn.insert('journal_entries', {
+        'transaction_id': id, 'account_id': fromAccountId,
+        'debit': 0, 'credit': amount,
+      });
+      await txn.insert('journal_entries', {
+        'transaction_id': id, 'account_id': toAccountId,
+        'debit': amount, 'credit': 0,
+      });
+      final totals = await txn.rawQuery(
+        'SELECT COALESCE(SUM(debit),0) d, COALESCE(SUM(credit),0) c FROM journal_entries WHERE transaction_id=?',
+        [id],
+      );
+      if ((totals.first['d'] as num) != (totals.first['c'] as num)) {
+        throw StateError('سند انتقال تراز نیست');
+      }
+    });
   }
 
   Future<void> updateSimpleTransaction({
