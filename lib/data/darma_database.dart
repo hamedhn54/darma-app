@@ -193,6 +193,85 @@ class DarmaDatabase {
     });
   }
 
+  Future<List<Map<String, Object?>>> getTransactions() async {
+    final db = await database;
+    return db.rawQuery('''
+      SELECT t.id, t.title, t.amount, t.kind, t.note, t.created_at,
+        e.account_id AS category_account_id, a.name AS category_name,
+        p.name AS parent_name
+      FROM journal_transactions t
+      JOIN journal_entries e ON e.transaction_id = t.id
+      JOIN accounts a ON a.id = e.account_id AND a.type = t.kind
+      LEFT JOIN accounts p ON p.id = a.parent_id
+      ORDER BY t.id DESC
+    ''');
+  }
+
+  Future<void> updateSimpleTransaction({
+    required int transactionId,
+    required String title,
+    required int amount,
+    required String kind,
+    required int categoryAccountId,
+  }) async {
+    if (title.trim().isEmpty) throw ArgumentError('شرح تراکنش الزامی است');
+    if (amount <= 0) throw ArgumentError('مبلغ باید بیشتر از صفر باشد');
+    if (kind != 'income' && kind != 'expense') throw ArgumentError('نوع تراکنش نامعتبر است');
+    final db = await database;
+    await db.transaction((txn) async {
+      final transactionRows = await txn.query(
+        'journal_transactions',
+        where: 'id = ?',
+        whereArgs: [transactionId],
+        limit: 1,
+      );
+      if (transactionRows.isEmpty) throw StateError('تراکنش پیدا نشد');
+      final categoryRows = await txn.query(
+        'accounts',
+        where: 'id = ? AND type = ? AND parent_id IS NOT NULL',
+        whereArgs: [categoryAccountId, kind],
+        limit: 1,
+      );
+      if (categoryRows.isEmpty) throw StateError('حساب انتخاب‌شده معتبر نیست');
+      final children = Sqflite.firstIntValue(await txn.rawQuery(
+        'SELECT COUNT(*) FROM accounts WHERE parent_id = ?',
+        [categoryAccountId],
+      ));
+      if ((children ?? 0) > 0) throw StateError('برای ثبت تراکنش، تفصیلی را انتخاب کنید');
+      final cash = Sqflite.firstIntValue(await txn.rawQuery(
+        "SELECT id FROM accounts WHERE name = 'کیف پول نقدی' AND type = 'asset' LIMIT 1",
+      ));
+      if (cash == null) throw StateError('حساب کیف پول نقدی پیدا نشد');
+      await txn.update(
+        'journal_transactions',
+        {'title': title.trim(), 'amount': amount, 'kind': kind},
+        where: 'id = ?',
+        whereArgs: [transactionId],
+      );
+      await txn.delete('journal_entries', where: 'transaction_id = ?', whereArgs: [transactionId]);
+      if (kind == 'income') {
+        await txn.insert('journal_entries', {'transaction_id': transactionId, 'account_id': cash, 'debit': amount, 'credit': 0});
+        await txn.insert('journal_entries', {'transaction_id': transactionId, 'account_id': categoryAccountId, 'debit': 0, 'credit': amount});
+      } else {
+        await txn.insert('journal_entries', {'transaction_id': transactionId, 'account_id': categoryAccountId, 'debit': amount, 'credit': 0});
+        await txn.insert('journal_entries', {'transaction_id': transactionId, 'account_id': cash, 'debit': 0, 'credit': amount});
+      }
+    });
+  }
+
+  Future<void> deleteTransaction(int transactionId) async {
+    final db = await database;
+    await db.transaction((txn) async {
+      final count = Sqflite.firstIntValue(await txn.rawQuery(
+        'SELECT COUNT(*) FROM journal_transactions WHERE id = ?',
+        [transactionId],
+      ));
+      if ((count ?? 0) == 0) throw StateError('تراکنش پیدا نشد');
+      await txn.delete('journal_entries', where: 'transaction_id = ?', whereArgs: [transactionId]);
+      await txn.delete('journal_transactions', where: 'id = ?', whereArgs: [transactionId]);
+    });
+  }
+
   Future<List<Map<String, Object?>>> getAccountSummaries() async {
     final db = await database;
     return db.rawQuery('''
