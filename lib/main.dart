@@ -1097,79 +1097,407 @@ class _DarmaHomeState extends State<DarmaHome> {
         ),
       );
 
-  Widget _morePage() => ListView(
-        padding: const EdgeInsets.all(18),
-        children: [
-          Text(
-            'امکانات دارما',
-            style: Theme.of(context)
-                .textTheme
-                .titleLarge
-                ?.copyWith(fontWeight: FontWeight.bold),
-          ),
-          const SizedBox(height: 12),
-          for (final item in [
-            ('تعاریف و حساب‌ها', Icons.account_tree_outlined),
-            ('اشخاص', Icons.people_outline),
-            ('وام‌ها و تسهیلات', Icons.handshake_outlined),
-            ('خریدهای اعتباری', Icons.credit_card),
-            ('بودجه‌بندی', Icons.pie_chart_outline),
-            ('اهداف مالی', Icons.flag_outlined),
-            ('تقویم مالی', Icons.calendar_month_outlined),
-            ('تنظیمات', Icons.settings_outlined),
-          ])
-            Card(
-              child: ListTile(
-                leading: Icon(item.$2),
-                title: Text(item.$1),
-                trailing: const Icon(Icons.chevron_left),
-                onTap: () {
-                  if (item.$1 == 'تعاریف و حساب‌ها') {
-                    Navigator.of(context).push(MaterialPageRoute(
-                        builder: (_) => const AccountsPage()));
-                  } else if (item.$1 == 'تنظیمات') {
-                    _showThemes();
-                  } else {
-                    _notice('بخش ${item.$1} در نسخه‌های بعدی فعال می‌شود.');
-                  }
-                },
-              ),
-            ),
-        ],
-      );
-
-  void _showThemes() => showModalBottomSheet(
-        context: context,
-        showDragHandle: true,
-        builder: (_) => Directionality(
-          textDirection: ui.TextDirection.rtl,
-          child: SafeArea(
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                const Padding(
-                  padding: EdgeInsets.all(16),
-                  child: Text('انتخاب پوسته',
-                      style:
-                          TextStyle(fontWeight: FontWeight.bold, fontSize: 18)),
-                ),
-                for (final name in _themes.keys)
-                  ListTile(
-                    leading: CircleAvatar(backgroundColor: _themes[name]),
-                    title: Text(name),
-                    trailing: widget.themeName == name
-                        ? const Icon(Icons.check_circle)
-                        : null,
-                    onTap: () {
-                      widget.onThemeChanged(name);
-                      Navigator.pop(context);
-                    },
-                  ),
-                const SizedBox(height: 12),
+  Widget _morePage() {
+    final scheme = Theme.of(context).colorScheme;
+    final dark = Theme.of(context).brightness == Brightness.dark;
+    return ListView(
+      padding: const EdgeInsets.fromLTRB(18, 14, 18, 112),
+      children: [
+        Container(
+          padding: const EdgeInsets.all(21),
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(26),
+            gradient: LinearGradient(
+              begin: Alignment.topRight,
+              end: Alignment.bottomLeft,
+              colors: [
+                scheme.primary.withValues(alpha: dark ? .24 : .15),
+                scheme.secondary.withValues(alpha: dark ? .13 : .07),
+                scheme.surface,
               ],
             ),
+            border: Border.all(color: scheme.primary.withValues(alpha: .28)),
+            boxShadow: [
+              BoxShadow(
+                color: scheme.primary.withValues(alpha: dark ? .08 : .045),
+                blurRadius: 22,
+                offset: const Offset(0, 8),
+              ),
+            ],
+          ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                children: [
+                  Container(
+                    width: 46,
+                    height: 46,
+                    decoration: BoxDecoration(
+                      color: scheme.primary.withValues(alpha: .16),
+                      borderRadius: BorderRadius.circular(15),
+                    ),
+                    child: Icon(Icons.grid_view_rounded, color: scheme.primary, size: 24),
+                  ),
+                  const Spacer(),
+                  Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                    decoration: BoxDecoration(
+                      color: scheme.primary.withValues(alpha: .12),
+                      borderRadius: BorderRadius.circular(20),
+                    ),
+                    child: Text('DARMA • TOOLS',
+                      style: TextStyle(color: scheme.primary, fontSize: 9,
+                        fontWeight: FontWeight.w900, letterSpacing: .7)),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 17),
+              const Text('همه ابزارهای دارما',
+                style: TextStyle(fontSize: 21, fontWeight: FontWeight.w900)),
+              const SizedBox(height: 6),
+              Text('مدیریت حساب‌ها، برنامه‌ریزی مالی و تنظیمات را از این بخش دنبال کنید.',
+                style: TextStyle(fontSize: 11, height: 1.8, color: scheme.onSurfaceVariant)),
+              const SizedBox(height: 15),
+              Row(
+                children: [
+                  _moreSummaryChip(Icons.account_balance_wallet_outlined, 'مدیریت مالی'),
+                  const SizedBox(width: 8),
+                  _moreSummaryChip(Icons.tune_rounded, 'شخصی‌سازی'),
+                ],
+              ),
+            ],
           ),
         ),
+        const SizedBox(height: 25),
+        _moreSectionTitle('مدیریت مالی', 'ساختار حساب‌ها و اطلاعات پایه'),
+        const SizedBox(height: 10),
+        _moreMenuGroup(
+          icon: Icons.account_tree_rounded,
+          color: const Color(0xFF4C9BCE),
+          title: 'تعاریف و حساب‌ها',
+          subtitle: 'حساب‌های بانکی، صندوق و سرفصل‌ها',
+          count: 'مدیریت حساب‌ها',
+          initiallyExpanded: true,
+          children: [
+            _moreMenuItem('سرفصل‌های اصلی و معین', 'ساختار دارایی، بدهی، درآمد و هزینه',
+              Icons.account_tree_outlined, true,
+              () => Navigator.of(context).push(MaterialPageRoute(
+                builder: (_) => const AccountsPage()))),
+            _moreMenuItem('حساب‌های بانکی و صندوق', 'مشاهده و ویرایش حساب‌های مالی',
+              Icons.account_balance_outlined, true,
+              () => Navigator.of(context).push(MaterialPageRoute(
+                builder: (_) => const AccountsPage()))),
+          ],
+        ),
+        const SizedBox(height: 20),
+        _moreSectionTitle('تعهدات و اعتبار', 'مدیریت روابط مالی و پرداخت‌های آتی'),
+        const SizedBox(height: 10),
+        _moreMenuGroup(
+          icon: Icons.handshake_outlined,
+          color: const Color(0xFFB58B55),
+          title: 'وام‌ها و تعهدات',
+          subtitle: 'وام‌های دریافتی و پرداخت‌های اقساطی',
+          count: 'در حال توسعه',
+          children: [
+            _moreMenuItem('وام‌های دریافتی', 'اصل بدهی، مانده و اقساط',
+              Icons.savings_outlined, false, () => _comingSoon('وام‌های دریافتی')),
+            _moreMenuItem('اقساط و سررسیدها', 'برنامه پرداخت و یادآوری سررسید',
+              Icons.event_repeat_rounded, false, () => _comingSoon('اقساط و سررسیدها')),
+          ],
+        ),
+        _moreMenuGroup(
+          icon: Icons.credit_card_rounded,
+          color: const Color(0xFF8D79C7),
+          title: 'خریدهای اعتباری',
+          subtitle: 'خرید اقساطی و بدهی پلتفرم‌ها',
+          count: 'در حال توسعه',
+          children: [
+            _moreMenuItem('پلتفرم‌های اعتباری', 'تارا، دیجی‌پی و سایر سرویس‌ها',
+              Icons.credit_score_outlined, false, () => _comingSoon('پلتفرم‌های اعتباری')),
+            _moreMenuItem('اقساط خریدها', 'مبالغ پرداخت‌شده و مانده بدهی',
+              Icons.receipt_long_outlined, false, () => _comingSoon('اقساط خریدها')),
+          ],
+        ),
+        _moreMenuGroup(
+          icon: Icons.people_alt_outlined,
+          color: const Color(0xFF3DAD91),
+          title: 'اشخاص',
+          subtitle: 'طلب‌ها، بدهی‌ها و گردش حساب افراد',
+          count: 'در حال توسعه',
+          children: [
+            _moreMenuItem('فهرست اشخاص', 'مدیریت افراد و طرف‌حساب‌ها',
+              Icons.people_outline_rounded, false, () => _comingSoon('فهرست اشخاص')),
+            _moreMenuItem('مانده طلب و بدهی', 'نمای خالص و جزئیات گردش اشخاص',
+              Icons.compare_arrows_rounded, false, () => _comingSoon('مانده طلب و بدهی')),
+          ],
+        ),
+        const SizedBox(height: 20),
+        _moreSectionTitle('برنامه‌ریزی مالی', 'برای کنترل بهتر مسیر مالی'),
+        const SizedBox(height: 10),
+        _moreMenuGroup(
+          icon: Icons.pie_chart_outline_rounded,
+          color: const Color(0xFF36A99B),
+          title: 'بودجه‌بندی',
+          subtitle: 'تعیین سقف هزینه برای سرفصل‌ها',
+          count: 'در حال توسعه',
+          children: [
+            _moreMenuItem('بودجه ماهانه', 'تخصیص بودجه در سطح کل، معین و تفصیلی',
+              Icons.calendar_view_month_rounded, false, () => _comingSoon('بودجه ماهانه')),
+            _moreMenuItem('عملکرد بودجه', 'مقایسه هزینه واقعی با بودجه',
+              Icons.query_stats_rounded, false, () => _comingSoon('عملکرد بودجه')),
+          ],
+        ),
+        _moreMenuGroup(
+          icon: Icons.flag_outlined,
+          color: const Color(0xFFD69B45),
+          title: 'اهداف مالی',
+          subtitle: 'پس‌انداز و پیگیری هدف‌های شخصی',
+          count: 'در حال توسعه',
+          children: [
+            _moreMenuItem('هدف جدید', 'تعریف مبلغ هدف و مهلت دستیابی',
+              Icons.add_task_rounded, false, () => _comingSoon('هدف جدید')),
+            _moreMenuItem('پیشرفت اهداف', 'میزان تحقق واریزهای هدفمند',
+              Icons.track_changes_rounded, false, () => _comingSoon('پیشرفت اهداف')),
+          ],
+        ),
+        const SizedBox(height: 20),
+        _moreSectionTitle('ابزارها و شخصی‌سازی', 'تنظیم تجربه کار با دارما'),
+        const SizedBox(height: 10),
+        _moreMenuGroup(
+          icon: Icons.calendar_month_outlined,
+          color: const Color(0xFF4D91C7),
+          title: 'تقویم مالی',
+          subtitle: 'نمایش رویدادها و تراکنش‌ها در تقویم شمسی',
+          count: 'در حال توسعه',
+          children: [
+            _moreMenuItem('نمای ماهانه', 'مرور رویدادهای مالی هر ماه',
+              Icons.calendar_view_month_outlined, false, () => _comingSoon('تقویم مالی')),
+            _moreMenuItem('سررسیدهای پیش‌رو', 'مشاهده پرداخت‌های نزدیک',
+              Icons.notifications_active_outlined, false, () => _comingSoon('سررسیدهای پیش‌رو')),
+          ],
+        ),
+        _moreMenuGroup(
+          icon: Icons.palette_outlined,
+          color: scheme.primary,
+          title: 'تنظیمات و ظاهر برنامه',
+          subtitle: 'انتخاب پوسته و شخصی‌سازی محیط',
+          count: 'فعال',
+          children: [
+            _moreMenuItem('انتخاب پوسته', 'تم‌های روشن، تیره و رنگی دارما',
+              Icons.color_lens_outlined, true, _showThemes),
+          ],
+        ),
+        const SizedBox(height: 18),
+        Container(
+          padding: const EdgeInsets.symmetric(horizontal: 15, vertical: 13),
+          decoration: BoxDecoration(
+            color: scheme.surface,
+            borderRadius: BorderRadius.circular(17),
+            border: Border.all(color: scheme.outline.withValues(alpha: .4)),
+          ),
+          child: Row(
+            children: [
+              Icon(Icons.shield_outlined, color: scheme.primary, size: 20),
+              const SizedBox(width: 10),
+              Expanded(child: Text('اطلاعات مالی شما به‌صورت محلی روی همین دستگاه نگهداری می‌شود.',
+                style: TextStyle(fontSize: 10, height: 1.7, color: scheme.onSurfaceVariant))),
+            ],
+          ),
+        ),
+        const SizedBox(height: 14),
+        Center(child: Text('DARMA  •  Hamed.hn',
+          style: TextStyle(fontSize: 10, letterSpacing: .6,
+            fontWeight: FontWeight.w800, color: scheme.onSurfaceVariant))),
+      ],
+    );
+  }
+
+  Widget _moreSummaryChip(IconData icon, String label) {
+    final scheme = Theme.of(context).colorScheme;
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 7),
+      decoration: BoxDecoration(
+        color: scheme.surface.withValues(alpha: .72),
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: scheme.outline.withValues(alpha: .35)),
+      ),
+      child: Row(mainAxisSize: MainAxisSize.min, children: [
+        Icon(icon, size: 13, color: scheme.primary),
+        const SizedBox(width: 6),
+        Text(label, style: const TextStyle(fontSize: 9, fontWeight: FontWeight.w700)),
+      ]),
+    );
+  }
+
+  Widget _moreSectionTitle(String title, String subtitle) => Row(
+    children: [
+      Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+        Text(title, style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w900)),
+        const SizedBox(height: 3),
+        Text(subtitle, style: TextStyle(fontSize: 10,
+          color: Theme.of(context).colorScheme.onSurfaceVariant)),
+      ])),
+      Container(width: 5, height: 29, decoration: BoxDecoration(
+        color: Theme.of(context).colorScheme.primary,
+        borderRadius: BorderRadius.circular(5))),
+    ],
+  );
+
+  Widget _moreMenuGroup({
+    required IconData icon,
+    required Color color,
+    required String title,
+    required String subtitle,
+    required String count,
+    required List<Widget> children,
+    bool initiallyExpanded = false,
+  }) {
+    final scheme = Theme.of(context).colorScheme;
+    return Card(
+      margin: const EdgeInsets.only(bottom: 9),
+      clipBehavior: Clip.antiAlias,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(20),
+        side: BorderSide(color: scheme.outline.withValues(alpha: .38)),
+      ),
+      child: Theme(
+        data: Theme.of(context).copyWith(dividerColor: Colors.transparent),
+        child: ExpansionTile(
+          initiallyExpanded: initiallyExpanded,
+          tilePadding: const EdgeInsets.symmetric(horizontal: 15, vertical: 5),
+          childrenPadding: const EdgeInsets.fromLTRB(12, 0, 12, 12),
+          leading: Container(
+            width: 43, height: 43,
+            decoration: BoxDecoration(color: color.withValues(alpha: .13),
+              borderRadius: BorderRadius.circular(14)),
+            child: Icon(icon, color: color, size: 22),
+          ),
+          title: Text(title, style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w900)),
+          subtitle: Padding(
+            padding: const EdgeInsets.only(top: 4),
+            child: Text(subtitle, style: TextStyle(fontSize: 10,
+              color: scheme.onSurfaceVariant, height: 1.5)),
+          ),
+          trailing: Column(mainAxisAlignment: MainAxisAlignment.center, children: [
+            Text(count, style: TextStyle(fontSize: 8, fontWeight: FontWeight.w800,
+              color: count == 'فعال' ? const Color(0xFF35B78A) : scheme.onSurfaceVariant)),
+            const SizedBox(height: 3),
+            Icon(Icons.keyboard_arrow_down_rounded, color: scheme.onSurfaceVariant, size: 18),
+          ]),
+          children: children,
+        ),
+      ),
+    );
+  }
+
+  Widget _moreMenuItem(String title, String subtitle, IconData icon,
+      bool enabled, VoidCallback onTap) {
+    final scheme = Theme.of(context).colorScheme;
+    return Padding(
+      padding: const EdgeInsets.only(top: 5),
+      child: Material(
+        color: scheme.onSurface.withValues(alpha: .025),
+        borderRadius: BorderRadius.circular(14),
+        child: InkWell(
+          onTap: onTap,
+          borderRadius: BorderRadius.circular(14),
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 11, vertical: 11),
+            child: Row(children: [
+              Icon(icon, size: 18, color: enabled ? scheme.primary : scheme.onSurfaceVariant),
+              const SizedBox(width: 11),
+              Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                Text(title, style: const TextStyle(fontSize: 11, fontWeight: FontWeight.w800)),
+                const SizedBox(height: 3),
+                Text(subtitle, style: TextStyle(fontSize: 9, color: scheme.onSurfaceVariant)),
+              ])),
+              Icon(enabled ? Icons.arrow_back_ios_new_rounded : Icons.lock_clock_outlined,
+                size: 13, color: scheme.onSurfaceVariant),
+            ]),
+          ),
+        ),
+      ),
+    );
+  }
+
+  void _comingSoon(String feature) =>
+      _notice('بخش $feature در برنامه توسعه دارما قرار دارد و هنوز فعال نیست.');
+
+  void _showThemes() => showModalBottomSheet<void>(
+        context: context,
+        isScrollControlled: true,
+        showDragHandle: true,
+        backgroundColor: Theme.of(context).colorScheme.surface,
+        shape: const RoundedRectangleBorder(
+          borderRadius: BorderRadius.vertical(top: Radius.circular(28)),
+        ),
+        builder: (sheetContext) {
+          final scheme = Theme.of(sheetContext).colorScheme;
+          return Directionality(
+            textDirection: ui.TextDirection.rtl,
+            child: SafeArea(
+              child: Padding(
+                padding: const EdgeInsets.fromLTRB(18, 8, 18, 22),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    const Text('شخصی‌سازی ظاهر دارما',
+                      style: TextStyle(fontSize: 18, fontWeight: FontWeight.w900)),
+                    const SizedBox(height: 5),
+                    Text('پوسته دلخواه خود را انتخاب کنید.',
+                      style: TextStyle(fontSize: 11, color: scheme.onSurfaceVariant)),
+                    const SizedBox(height: 17),
+                    for (final entry in _themes.entries)
+                      Padding(
+                        padding: const EdgeInsets.only(bottom: 8),
+                        child: InkWell(
+                          borderRadius: BorderRadius.circular(16),
+                          onTap: () {
+                            widget.onThemeChanged(entry.key);
+                            Navigator.pop(sheetContext);
+                          },
+                          child: Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 13, vertical: 12),
+                            decoration: BoxDecoration(
+                              color: widget.themeName == entry.key
+                                  ? entry.value.withValues(alpha: .10)
+                                  : scheme.surface,
+                              borderRadius: BorderRadius.circular(16),
+                              border: Border.all(
+                                color: widget.themeName == entry.key
+                                    ? entry.value.withValues(alpha: .65)
+                                    : scheme.outline.withValues(alpha: .38),
+                                width: widget.themeName == entry.key ? 1.4 : 1,
+                              ),
+                            ),
+                            child: Row(children: [
+                              Container(width: 34, height: 34,
+                                decoration: BoxDecoration(
+                                  color: entry.value,
+                                  borderRadius: BorderRadius.circular(11),
+                                ),
+                                child: const Icon(Icons.palette_outlined,
+                                  color: Colors.white, size: 18)),
+                              const SizedBox(width: 12),
+                              Expanded(child: Text(entry.key,
+                                style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w800))),
+                              if (widget.themeName == entry.key)
+                                Icon(Icons.check_circle_rounded, color: entry.value, size: 21)
+                              else
+                                Icon(Icons.chevron_left_rounded,
+                                  color: scheme.onSurfaceVariant, size: 20),
+                            ]),
+                          ),
+                        ),
+                      ),
+                  ],
+                ),
+              ),
+            ),
+          );
+        },
       );
 
   Future<DateTime?> _showJalaliDatePicker(DateTime initialDate) async {
