@@ -15,12 +15,40 @@ void main() async {
 }
 
 const _themes = <String, Color>{
-  'Executive Dark': Color(0xFF101827),
-  'Executive Light': Color(0xFFF3F5F8),
-  'Emerald': Color(0xFF0B3028),
-  'Royal Purple': Color(0xFF281B3D),
-  'Graphite': Color(0xFF25282E),
+  'Executive Dark': Color(0xFFD6B36A),
+  'Executive Light': Color(0xFF173B59),
+  'Emerald': Color(0xFF42C6A5),
+  'Royal Purple': Color(0xFFB69AF5),
+  'Graphite': Color(0xFFE0B36B),
 };
+
+Color _surfaceForTheme(String name, bool dark) {
+  if (!dark) return const Color(0xFFF5F6F8);
+  switch (name) {
+    case 'Emerald':
+      return const Color(0xFF081B18);
+    case 'Royal Purple':
+      return const Color(0xFF171225);
+    case 'Graphite':
+      return const Color(0xFF17191E);
+    default:
+      return const Color(0xFF0A1220);
+  }
+}
+
+Color _cardForTheme(String name, bool dark) {
+  if (!dark) return Colors.white;
+  switch (name) {
+    case 'Emerald':
+      return const Color(0xFF102923);
+    case 'Royal Purple':
+      return const Color(0xFF211A32);
+    case 'Graphite':
+      return const Color(0xFF22252C);
+    default:
+      return const Color(0xFF131F31);
+  }
+}
 
 class DarmaApp extends StatefulWidget {
   const DarmaApp({super.key});
@@ -34,7 +62,19 @@ class _DarmaAppState extends State<DarmaApp> {
   @override
   Widget build(BuildContext context) {
     final dark = _theme != 'Executive Light';
-    final seed = _themes[_theme]!;
+    final accent = _themes[_theme]!;
+    final surface = _surfaceForTheme(_theme, dark);
+    final cardSurface = _cardForTheme(_theme, dark);
+    final scheme = ColorScheme.fromSeed(
+      seedColor: accent,
+      brightness: dark ? Brightness.dark : Brightness.light,
+    ).copyWith(
+      primary: accent,
+      secondary: dark ? const Color(0xFF35B7B0) : const Color(0xFF267D82),
+      surface: cardSurface,
+      onSurface: dark ? const Color(0xFFF1F4F8) : const Color(0xFF182333),
+      outline: dark ? const Color(0xFF344256) : const Color(0xFFDCE2E9),
+    );
     return MaterialApp(
       debugShowCheckedModeBanner: false,
       title: 'دارما',
@@ -44,18 +84,62 @@ class _DarmaAppState extends State<DarmaApp> {
       theme: ThemeData(
         useMaterial3: true,
         brightness: dark ? Brightness.dark : Brightness.light,
-        colorScheme: ColorScheme.fromSeed(
-          seedColor: seed,
-          brightness: dark ? Brightness.dark : Brightness.light,
-        ),
-        scaffoldBackgroundColor:
-            dark ? const Color(0xFF0B1220) : const Color(0xFFF4F6FA),
+        colorScheme: scheme,
+        scaffoldBackgroundColor: surface,
         fontFamily: 'Roboto',
-        cardTheme: CardThemeData(
+        appBarTheme: AppBarTheme(
+          backgroundColor: surface,
+          foregroundColor: scheme.onSurface,
           elevation: 0,
-          shape:
-              RoundedRectangleBorder(borderRadius: BorderRadius.circular(22)),
+          scrolledUnderElevation: 0,
+          centerTitle: false,
+          titleTextStyle: TextStyle(
+            color: scheme.onSurface,
+            fontSize: 19,
+            fontWeight: FontWeight.w900,
+          ),
         ),
+        cardTheme: CardThemeData(
+          color: cardSurface,
+          elevation: 0,
+          margin: const EdgeInsets.symmetric(vertical: 5),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(22),
+            side: BorderSide(color: scheme.outline.withValues(alpha: .42)),
+          ),
+        ),
+        inputDecorationTheme: InputDecorationTheme(
+          filled: true,
+          fillColor: dark ? Colors.white.withValues(alpha: .035) : const Color(0xFFF7F8FA),
+          contentPadding: const EdgeInsets.symmetric(horizontal: 15, vertical: 14),
+          border: OutlineInputBorder(
+            borderRadius: BorderRadius.circular(15),
+            borderSide: BorderSide(color: scheme.outline),
+          ),
+          enabledBorder: OutlineInputBorder(
+            borderRadius: BorderRadius.circular(15),
+            borderSide: BorderSide(color: scheme.outline.withValues(alpha: .65)),
+          ),
+          focusedBorder: OutlineInputBorder(
+            borderRadius: BorderRadius.circular(15),
+            borderSide: BorderSide(color: accent, width: 1.6),
+          ),
+        ),
+        navigationBarTheme: NavigationBarThemeData(
+          backgroundColor: cardSurface,
+          indicatorColor: accent.withValues(alpha: .18),
+          labelTextStyle: WidgetStateProperty.resolveWith((states) => TextStyle(
+            fontSize: 11,
+            fontWeight: states.contains(WidgetState.selected) ? FontWeight.w800 : FontWeight.w500,
+          )),
+        ),
+        floatingActionButtonTheme: FloatingActionButtonThemeData(
+          backgroundColor: accent,
+          foregroundColor: dark ? const Color(0xFF111827) : Colors.white,
+          elevation: 5,
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(18)),
+        ),
+        dividerTheme: DividerThemeData(color: scheme.outline.withValues(alpha: .55)),
       ),
       home: DarmaHome(
         themeName: _theme,
@@ -305,11 +389,43 @@ class _DarmaHomeState extends State<DarmaHome> {
       textDirection: ui.TextDirection.rtl,
       child: Scaffold(
         appBar: AppBar(
-          title: const Row(
+          title: Row(
             children: [
-              Icon(Icons.account_balance_wallet_rounded),
-              SizedBox(width: 9),
-              Text('دارما', style: TextStyle(fontWeight: FontWeight.w800)),
+              Container(
+                width: 38,
+                height: 38,
+                decoration: BoxDecoration(
+                  gradient: LinearGradient(
+                    colors: [Theme.of(context).colorScheme.primary, Theme.of(context).colorScheme.secondary],
+                    begin: Alignment.topRight,
+                    end: Alignment.bottomLeft,
+                  ),
+                  borderRadius: BorderRadius.circular(12),
+                  boxShadow: [
+                    BoxShadow(
+                      color: Theme.of(context).colorScheme.primary.withValues(alpha: .22),
+                      blurRadius: 12,
+                      offset: const Offset(0, 4),
+                    ),
+                  ],
+                ),
+                alignment: Alignment.center,
+                child: Text('D', style: TextStyle(
+                  color: Theme.of(context).brightness == Brightness.dark ? const Color(0xFF101827) : Colors.white,
+                  fontSize: 23,
+                  fontWeight: FontWeight.w900,
+                  height: 1,
+                )),
+              ),
+              const SizedBox(width: 11),
+              const Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Text('دارما', style: TextStyle(fontWeight: FontWeight.w900, height: 1.1)),
+                  Text('مدیریت هوشمند مالی', style: TextStyle(fontSize: 10, fontWeight: FontWeight.w500, color: Colors.grey)),
+                ],
+              ),
             ],
           ),
           actions: [
@@ -369,20 +485,36 @@ class _DarmaHomeState extends State<DarmaHome> {
             Container(
               padding: const EdgeInsets.all(22),
               decoration: BoxDecoration(
-                borderRadius: BorderRadius.circular(26),
+                borderRadius: BorderRadius.circular(28),
                 gradient: LinearGradient(
                   colors: [
-                    Theme.of(context).colorScheme.primaryContainer,
-                    Theme.of(context).colorScheme.surfaceContainerHighest,
+                    Theme.of(context).colorScheme.primary,
+                    Theme.of(context).colorScheme.secondary,
+                    Theme.of(context).colorScheme.primary.withValues(alpha: .82),
                   ],
+                  stops: const [0, .58, 1],
                   begin: Alignment.topRight,
                   end: Alignment.bottomLeft,
                 ),
+                boxShadow: [
+                  BoxShadow(
+                    color: Theme.of(context).colorScheme.primary.withValues(alpha: .20),
+                    blurRadius: 24,
+                    offset: const Offset(0, 12),
+                  ),
+                ],
               ),
-              child: Column(
+              child: DefaultTextStyle(
+                style: TextStyle(color: Theme.of(context).brightness == Brightness.dark ? const Color(0xFF101827) : Colors.white),
+                child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  const Text('موجودی خالص حساب‌های نقدی'),
+                  Row(
+                    children: [
+                      const Expanded(child: Text('موجودی خالص حساب‌های نقدی', style: TextStyle(fontWeight: FontWeight.w700))),
+                      Icon(Icons.account_balance_wallet_rounded, color: Theme.of(context).brightness == Brightness.dark ? const Color(0xFF101827).withValues(alpha: .75) : Colors.white70),
+                    ],
+                  ),
                   const SizedBox(height: 10),
                   DropdownButtonFormField<int?>(
                     value: _selectedCashAccountId,
@@ -413,11 +545,11 @@ class _DarmaHomeState extends State<DarmaHome> {
                         ?.copyWith(fontWeight: FontWeight.w900),
                   ),
                   const SizedBox(height: 8),
-                  const Text('ذخیره‌سازی محلی روی همین دستگاه',
-                      style: TextStyle(fontSize: 12)),
+                  Text('ذخیره‌سازی محلی روی همین دستگاه',
+                      style: TextStyle(fontSize: 12, color: Theme.of(context).brightness == Brightness.dark ? const Color(0xFF101827).withValues(alpha: .72) : Colors.white70)),
                 ],
               ),
-            ),
+              ),
             const SizedBox(height: 22),
             Row(
               children: [
