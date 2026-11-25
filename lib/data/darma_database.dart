@@ -648,6 +648,15 @@ class DarmaDatabase {
         if (parents.first['parent_id'] == null) {
           throw StateError('امکان ایجاد تفصیلی زیر سرفصل اصلی وجود ندارد');
         }
+        if (type == 'asset') {
+          final used = Sqflite.firstIntValue(await txn.rawQuery(
+            'SELECT COUNT(*) FROM journal_entries WHERE account_id = ?',
+            [parentId],
+          ));
+          if ((used ?? 0) > 0) {
+            throw StateError('این حساب گردش مالی دارد و نمی‌توان آن را به حساب مادر تبدیل کرد');
+          }
+        }
         targetParent = parentId;
       }
       final duplicate = Sqflite.firstIntValue(await txn.rawQuery(
