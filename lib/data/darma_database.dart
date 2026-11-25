@@ -3,15 +3,22 @@ import 'package:sqflite/sqflite.dart';
 import '../domain/ledger_entry.dart';
 
 class DarmaDatabase {
-  DarmaDatabase._();
+  DarmaDatabase._({String? databasePath}) : _databasePath = databasePath;
   static final DarmaDatabase instance = DarmaDatabase._();
+
+  /// Creates an isolated database instance for SQLite integration tests.
+  factory DarmaDatabase.forTesting({required String databasePath}) {
+    return DarmaDatabase._(databasePath: databasePath);
+  }
+
+  final String? _databasePath;
   Database? _db;
 
   Future<Database> get database async {
     if (_db != null) return _db!;
-    final root = await getDatabasesPath();
+    final path = _databasePath ?? p.join(await getDatabasesPath(), 'darma.db');
     _db = await openDatabase(
-      p.join(root, 'darma.db'),
+      path,
       version: 6,
       onConfigure: (db) async {
         await db.execute('PRAGMA foreign_keys = ON');
