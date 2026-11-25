@@ -682,13 +682,34 @@ class _DarmaHomeState extends State<DarmaHome> {
   Widget _transactionsPage() => RefreshIndicator(
         onRefresh: _refresh,
         child: ListView.builder(
-          padding: const EdgeInsets.fromLTRB(14, 12, 14, 100),
+          padding: const EdgeInsets.fromLTRB(16, 14, 16, 112),
           itemCount: _visibleTransactions.isEmpty ? 2 : _visibleTransactions.length + 1,
           itemBuilder: (context, index) {
             if (index == 0) {
               return Card(
-                child: ListTile(
-                  leading: const Icon(Icons.calendar_month_rounded),
+                clipBehavior: Clip.antiAlias,
+                margin: const EdgeInsets.only(bottom: 16),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(22),
+                  side: BorderSide(color: Theme.of(context).colorScheme.primary.withValues(alpha: .28)),
+                ),
+                child: Container(
+                  decoration: BoxDecoration(
+                    gradient: LinearGradient(
+                      colors: [Theme.of(context).colorScheme.primary.withValues(alpha: .13), Theme.of(context).colorScheme.surface],
+                      begin: Alignment.topRight, end: Alignment.bottomLeft,
+                    ),
+                  ),
+                  child: ListTile(
+                  contentPadding: const EdgeInsets.symmetric(horizontal: 18, vertical: 9),
+                  leading: Container(
+                    width: 44, height: 44,
+                    decoration: BoxDecoration(
+                      color: Theme.of(context).colorScheme.primary.withValues(alpha: .15),
+                      borderRadius: BorderRadius.circular(14),
+                    ),
+                    child: Icon(Icons.calendar_month_rounded, color: Theme.of(context).colorScheme.primary),
+                  ),
                   title: Text(_selectedTransactionDate == null
                       ? 'همه تاریخ‌ها'
                       : 'تراکنش‌های ${_jalaliDateLabel(_selectedTransactionDate!)}'),
@@ -706,6 +727,7 @@ class _DarmaHomeState extends State<DarmaHome> {
                     ],
                   ),
                   onTap: _pickTransactionDate,
+                  ),
                 ),
               );
             }
@@ -736,17 +758,30 @@ class _DarmaHomeState extends State<DarmaHome> {
                     'حساب: ${transaction['financial_account_name'] ?? 'کیف پول نقدی'}\\n'
                     '${_moneyText((transaction['amount'] as num).toInt())} ریال'
                     '${fee > 0 ? ' • کارمزد: ${_moneyText(fee)} ریال' : ''}';
+            final transactionColor = transfer
+                ? const Color(0xFFD69B45)
+                : income ? const Color(0xFF35B78A) : const Color(0xFFE16B70);
             return Card(
-              child: ListTile(
+              clipBehavior: Clip.antiAlias,
+              margin: const EdgeInsets.only(bottom: 11),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(20),
+                side: BorderSide(color: transactionColor.withValues(alpha: .25)),
+              ),
+              child: Container(
+                decoration: BoxDecoration(
+                  border: Border(right: BorderSide(color: transactionColor, width: 4)),
+                ),
+                child: ListTile(
+                contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 9),
                 onTap: transfer
                     ? () => _newTransfer(existing: transaction)
                     : () => _newTransaction(existing: transaction),
                 leading: CircleAvatar(
-                  backgroundColor: (transfer ? Colors.orange : income ? Colors.green : Colors.red)
-                      .withValues(alpha: 0.14),
+                  backgroundColor: transactionColor.withValues(alpha: 0.14),
                   child: Icon(
                     transfer ? Icons.sync_alt : income ? Icons.south_west : Icons.north_east,
-                    color: transfer ? Colors.orange : income ? Colors.green : Colors.red,
+                    color: transactionColor,
                   ),
                 ),
                 title: Text(transaction['title'] as String,
@@ -793,6 +828,7 @@ class _DarmaHomeState extends State<DarmaHome> {
                   ],
                 ),
                 shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                ),
               ),
             );
           },
