@@ -34,17 +34,21 @@ class AccountsPage extends StatelessWidget {
             Card(
               clipBehavior: Clip.antiAlias,
               child: ListTile(
-                contentPadding: const EdgeInsets.symmetric(horizontal: 18, vertical: 10),
+                contentPadding:
+                    const EdgeInsets.symmetric(horizontal: 18, vertical: 10),
                 leading: CircleAvatar(
-                  backgroundColor: Theme.of(context).colorScheme.primaryContainer,
+                  backgroundColor:
+                      Theme.of(context).colorScheme.primaryContainer,
                   child: Icon(_icons[entry.key]),
                 ),
-                title: Text(entry.value, style: const TextStyle(fontWeight: FontWeight.w800)),
+                title: Text(entry.value,
+                    style: const TextStyle(fontWeight: FontWeight.w800)),
                 subtitle: const Text('مشاهده و مدیریت معین و تفصیلی'),
                 trailing: const Icon(Icons.chevron_left_rounded),
                 onTap: () => Navigator.of(context).push(
                   MaterialPageRoute(
-                    builder: (_) => AccountGroupPage(type: entry.key, title: entry.value),
+                    builder: (_) =>
+                        AccountGroupPage(type: entry.key, title: entry.value),
                   ),
                 ),
               ),
@@ -91,11 +95,15 @@ class _AccountGroupPageState extends State<AccountGroupPage> {
     return _accounts.where((a) => a['parent_id'] == id).toList();
   }
 
-  String _errorText(Object error) =>
-      error.toString().replaceFirst('Bad state: ', '').replaceFirst('Exception: ', '');
+  String _errorText(Object error) => error
+      .toString()
+      .replaceFirst('Bad state: ', '')
+      .replaceFirst('Exception: ', '');
 
   void _message(String message) {
-    if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(message)));
+    if (mounted)
+      ScaffoldMessenger.of(context)
+          .showSnackBar(SnackBar(content: Text(message)));
   }
 
   Future<String?> _nameDialog({String? initial, required String title}) async {
@@ -109,11 +117,17 @@ class _AccountGroupPageState extends State<AccountGroupPage> {
           autofocus: true,
           textDirection: TextDirection.rtl,
           decoration: const InputDecoration(labelText: 'نام حساب'),
-          onSubmitted: (_) => Navigator.pop(dialogContext, controller.text.trim()),
+          onSubmitted: (_) =>
+              Navigator.pop(dialogContext, controller.text.trim()),
         ),
         actions: [
-          TextButton(onPressed: () => Navigator.pop(dialogContext), child: const Text('انصراف')),
-          FilledButton(onPressed: () => Navigator.pop(dialogContext, controller.text.trim()), child: const Text('ذخیره')),
+          TextButton(
+              onPressed: () => Navigator.pop(dialogContext),
+              child: const Text('انصراف')),
+          FilledButton(
+              onPressed: () =>
+                  Navigator.pop(dialogContext, controller.text.trim()),
+              child: const Text('ذخیره')),
         ],
       ),
     );
@@ -151,11 +165,14 @@ class _AccountGroupPageState extends State<AccountGroupPage> {
   Future<void> _rename(Map<String, Object?> account) async {
     final name = await _nameDialog(
       initial: account['name'] as String,
-      title: account['parent_id'] == account['root_id'] ? 'ویرایش معین' : 'ویرایش تفصیلی',
+      title: account['parent_id'] == account['root_id']
+          ? 'ویرایش معین'
+          : 'ویرایش تفصیلی',
     );
     if (name == null) return;
     try {
-      await DarmaDatabase.instance.renameAccount(id: account['id'] as int, name: name);
+      await DarmaDatabase.instance
+          .renameAccount(id: account['id'] as int, name: name);
       await _load();
     } catch (error) {
       _message(_errorText(error));
@@ -168,10 +185,15 @@ class _AccountGroupPageState extends State<AccountGroupPage> {
       context: context,
       builder: (dialogContext) => AlertDialog(
         title: Text(isMain ? 'حذف حساب معین' : 'حذف حساب تفصیلی'),
-        content: Text('«${account['name']}» حذف شود؟ اگر حساب گردش مالی یا زیرحساب داشته باشد، حذف نخواهد شد.'),
+        content: Text(
+            '«${account['name']}» حذف شود؟ اگر حساب گردش مالی یا زیرحساب داشته باشد، حذف نخواهد شد.'),
         actions: [
-          TextButton(onPressed: () => Navigator.pop(dialogContext, false), child: const Text('انصراف')),
-          FilledButton.tonal(onPressed: () => Navigator.pop(dialogContext, true), child: const Text('حذف')),
+          TextButton(
+              onPressed: () => Navigator.pop(dialogContext, false),
+              child: const Text('انصراف')),
+          FilledButton.tonal(
+              onPressed: () => Navigator.pop(dialogContext, true),
+              child: const Text('حذف')),
         ],
       ),
     );
@@ -224,21 +246,30 @@ class _AccountGroupPageState extends State<AccountGroupPage> {
               child: ListView(
                 padding: const EdgeInsets.fromLTRB(14, 12, 14, 100),
                 children: [
-                  Text('حساب‌های معین', style: Theme.of(context).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w800)),
+                  Text('حساب‌های معین',
+                      style: Theme.of(context)
+                          .textTheme
+                          .titleMedium
+                          ?.copyWith(fontWeight: FontWeight.w800)),
                   const SizedBox(height: 8),
                   if (mains.isEmpty)
                     const Padding(
                       padding: EdgeInsets.all(24),
-                      child: Center(child: Text('هنوز حساب معینی ثبت نشده است.')),
+                      child:
+                          Center(child: Text('هنوز حساب معینی ثبت نشده است.')),
                     ),
                   for (final main in mains)
                     Card(
                       clipBehavior: Clip.antiAlias,
                       child: ExpansionTile(
                         key: PageStorageKey('account-${main['id']}'),
-                        leading: const CircleAvatar(child: Icon(Icons.account_tree_outlined)),
-                        title: Text(main['name'] as String, style: const TextStyle(fontWeight: FontWeight.w700)),
-                        subtitle: Text('${_detailsOf(main['id'] as int).length} تفصیلی'),
+                        leading: const CircleAvatar(
+                            child: Icon(Icons.account_tree_outlined)),
+                        title: Text(main['name'] as String,
+                            style:
+                                const TextStyle(fontWeight: FontWeight.w700)),
+                        subtitle: Text(
+                            '${_detailsOf(main['id'] as int).length} تفصیلی'),
                         trailing: Row(
                           mainAxisSize: MainAxisSize.min,
                           children: [
@@ -254,15 +285,19 @@ class _AccountGroupPageState extends State<AccountGroupPage> {
                         children: [
                           for (final detail in _detailsOf(main['id'] as int))
                             ListTile(
-                              contentPadding: const EdgeInsetsDirectional.only(start: 54, end: 12),
-                              leading: const Icon(Icons.subdirectory_arrow_left_rounded, size: 20),
+                              contentPadding: const EdgeInsetsDirectional.only(
+                                  start: 54, end: 12),
+                              leading: const Icon(
+                                  Icons.subdirectory_arrow_left_rounded,
+                                  size: 20),
                               title: Text(detail['name'] as String),
                               trailing: _menu(detail),
                             ),
                           if (_detailsOf(main['id'] as int).isEmpty)
                             const Padding(
                               padding: EdgeInsets.fromLTRB(16, 4, 16, 16),
-                              child: Text('برای این معین هنوز تفصیلی ثبت نشده است.'),
+                              child: Text(
+                                  'برای این معین هنوز تفصیلی ثبت نشده است.'),
                             ),
                           Align(
                             alignment: AlignmentDirectional.centerStart,
