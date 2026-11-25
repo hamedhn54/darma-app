@@ -1,5 +1,6 @@
 import 'package:path/path.dart' as p;
 import 'package:sqflite/sqflite.dart';
+import '../domain/ledger_entry.dart';
 
 class DarmaDatabase {
   DarmaDatabase._();
@@ -193,12 +194,21 @@ class DarmaDatabase {
   }
 
   Future<void> _assertBalanced(DatabaseExecutor txn, int transactionId) async {
-    final totals = await txn.rawQuery(
-      'SELECT COALESCE(SUM(debit),0) d, COALESCE(SUM(credit),0) c FROM journal_entries WHERE transaction_id = ?',
-      [transactionId],
+    final rows = await txn.query(
+      'journal_entries',
+      columns: ['account_id', 'debit', 'credit'],
+      where: 'transaction_id = ?',
+      whereArgs: [transactionId],
     );
-    if ((totals.first['d'] as num) != (totals.first['c'] as num)) {
-      throw StateError('سند حسابداری تراز نیست');
+    final document = LedgerDocument(
+      rows.map((row) => LedgerEntry(
+        accountId: row['account_id'] as int,
+        debit: row['debit'] as int,
+        credit: row['credit'] as int,
+      )).toList(growable: false),
+    );
+    if (!document.isBalanced) {
+      throw StateError('سند حسابداری معتبر و تراز نیست');
     }
   }
 
