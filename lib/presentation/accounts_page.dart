@@ -299,6 +299,128 @@ class _AccountGroupPageState extends State<AccountGroupPage> {
     if (result == true) await _load();
   }
 
+  Future<void> _editFinancialAccount(Map<String, Object?> account) async {
+    final name = TextEditingController(text: account['name'] as String? ?? '');
+    final bank = TextEditingController(text: account['bank_name'] as String? ?? '');
+    final card = TextEditingController(text: account['card_number'] as String? ?? '');
+    final opening = TextEditingController(
+      text: ((account['opening_balance'] as num?)?.toInt() ?? 0).toString(),
+    );
+    String kind = account['account_kind'] as String? ?? 'bank';
+    final formKey = GlobalKey<FormState>();
+    final result = await showModalBottomSheet<bool>(
+      context: context,
+      isScrollControlled: true,
+      showDragHandle: true,
+      builder: (sheetContext) => StatefulBuilder(
+        builder: (sheetContext, setSheet) => Directionality(
+          textDirection: TextDirection.rtl,
+          child: Padding(
+            padding: EdgeInsets.fromLTRB(
+              20, 8, 20, MediaQuery.of(sheetContext).viewInsets.bottom + 24),
+            child: Form(
+              key: formKey,
+              child: SingleChildScrollView(
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    const Text('ویرایش حساب مالی',
+                      style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold)),
+                    const SizedBox(height: 16),
+                    DropdownButtonFormField<String>(
+                      value: kind,
+                      decoration: const InputDecoration(
+                        labelText: 'نوع حساب مالی', border: OutlineInputBorder()),
+                      items: const [
+                        DropdownMenuItem(value: 'bank', child: Text('حساب بانکی')),
+                        DropdownMenuItem(value: 'cash', child: Text('صندوق / وجه نقد')),
+                        DropdownMenuItem(value: 'wallet', child: Text('کیف پول الکترونیکی')),
+                        DropdownMenuItem(value: 'other', child: Text('سایر دارایی نقدی')),
+                      ],
+                      onChanged: (value) => setSheet(() => kind = value ?? 'bank'),
+                    ),
+                    const SizedBox(height: 12),
+                    TextFormField(
+                      controller: name,
+                      decoration: const InputDecoration(
+                        labelText: 'نام حساب', border: OutlineInputBorder()),
+                      validator: (value) => value == null || value.trim().isEmpty
+                          ? 'نام حساب را وارد کنید' : null,
+                    ),
+                    if (kind == 'bank') ...[
+                      const SizedBox(height: 12),
+                      TextFormField(
+                        controller: bank,
+                        decoration: const InputDecoration(
+                          labelText: 'نام بانک', border: OutlineInputBorder()),
+                        validator: (value) => kind == 'bank' &&
+                            (value == null || value.trim().isEmpty)
+                            ? 'نام بانک را وارد کنید' : null,
+                      ),
+                      const SizedBox(height: 12),
+                      TextFormField(
+                        controller: card,
+                        keyboardType: TextInputType.number,
+                        decoration: const InputDecoration(
+                          labelText: 'شماره کارت (اختیاری)',
+                          border: OutlineInputBorder()),
+                      ),
+                    ],
+                    const SizedBox(height: 12),
+                    TextFormField(
+                      controller: opening,
+                      keyboardType: TextInputType.number,
+                      decoration: const InputDecoration(
+                        labelText: 'موجودی اولیه به ریال',
+                        helperText: 'تغییر این مقدار، مانده حساب را نیز تغییر می‌دهد.',
+                        border: OutlineInputBorder()),
+                      validator: (value) {
+                        final parsed = _parseInteger(value ?? '');
+                        return parsed == null || parsed < 0
+                            ? 'موجودی اولیه معتبر وارد کنید' : null;
+                      },
+                    ),
+                    const SizedBox(height: 18),
+                    FilledButton(
+                      onPressed: () async {
+                        if (!formKey.currentState!.validate()) return;
+                        try {
+                          await DarmaDatabase.instance.updateFinancialAccount(
+                            id: account['id'] as int,
+                            name: name.text.trim(),
+                            accountKind: kind,
+                            bankName: kind == 'bank' ? bank.text.trim() : null,
+                            cardNumber: kind == 'bank' && card.text.trim().isNotEmpty
+                                ? card.text.trim() : null,
+                            openingBalance: _parseInteger(opening.text)!,
+                          );
+                          if (sheetContext.mounted) Navigator.pop(sheetContext, true);
+                        } catch (error) {
+                          if (sheetContext.mounted) {
+                            ScaffoldMessenger.of(sheetContext).showSnackBar(
+                              SnackBar(content: Text(_errorText(error))),
+                            );
+                          }
+                        }
+                      },
+                      child: const Text('ذخیره تغییرات'),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+    name.dispose();
+    bank.dispose();
+    card.dispose();
+    opening.dispose();
+    if (result == true) await _load();
+  }
+
   Future<void> _rename(Map<String, Object?> account) async {
     final name = await _nameDialog(
       initial: account['name'] as String,
@@ -365,10 +487,21 @@ class _AccountGroupPageState extends State<AccountGroupPage> {
     return PopupMenuButton<String>(
       tooltip: 'مدیریت حساب',
       onSelected: (value) {
+        if (value == 'edit_financial') _editFinancialAccount(account);
         if (value == 'rename') _rename(account);
         if (value == 'delete') _delete(account);
       },
       itemBuilder: (_) => [
+        if (widget.type == 'asset' &&
+            account['parent_id'] != account['root_id'] &&
+            (account['account_kind'] != null ||
+                account['name'] == 'کیف پول نقدی' ||
+                account['name'] == 'حساب بانکی' ||
+                account['name'] == 'کیف پول الکترونیکی'))
+          const PopupMenuItem(
+            value: 'edit_financial',
+            child: Text('ویرایش اطلاعات حساب'),
+          ),
         const PopupMenuItem(value: 'rename', child: Text('ویرایش نام')),
         PopupMenuItem(
           value: 'delete',
