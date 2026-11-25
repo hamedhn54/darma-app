@@ -168,6 +168,12 @@ class _DarmaHomeState extends State<DarmaHome> {
     return '${_digits(j.year.toString())}/${_digits(j.month.toString().padLeft(2, '0'))}/${_digits(j.day.toString().padLeft(2, '0'))}';
   }
 
+  String _transactionDateText(Object? rawDate) {
+    if (rawDate is! String) return '';
+    final date = DateTime.tryParse(rawDate)?.toLocal();
+    return date == null ? '' : _jalaliDateLabel(date);
+  }
+
   Future<void> _pickTransactionDate() async {
     final now = Jalali.now();
     final initial = _selectedTransactionDate == null
@@ -461,6 +467,7 @@ class _DarmaHomeState extends State<DarmaHome> {
     final transfer = kind == 'transfer';
     final income = kind == 'income';
     final fee = (r['fee'] as num?)?.toInt() ?? 0;
+    final date = _transactionDateText(r['created_at']);
     return Card(
       child: ListTile(
         leading: CircleAvatar(
@@ -486,6 +493,7 @@ class _DarmaHomeState extends State<DarmaHome> {
         title: Text(r['title'] as String),
         subtitle: Text(
           '${transfer ? 'انتقال وجه' : income ? 'دریافت' : 'پرداخت'}'
+          '${date.isNotEmpty ? ' • $date' : ''}'
           '${fee > 0 ? ' • کارمزد: ${_moneyText(fee)} ریال' : ''}',
         ),
         trailing: Text(
@@ -561,11 +569,14 @@ class _DarmaHomeState extends State<DarmaHome> {
             final income = kind == 'income';
             final transfer = kind == 'transfer';
             final fee = (transaction['fee'] as num?)?.toInt() ?? 0;
+            final date = _transactionDateText(transaction['created_at']);
+            final dateLabel = date.isNotEmpty ? ' • $date' : '';
             final subtitle = transfer
-                ? '${transaction['from_account_name'] ?? 'مبدأ'} ← ${transaction['to_account_name'] ?? 'مقصد'}\\n'
+                ? 'انتقال وجه$dateLabel\\n'
+                    '${transaction['from_account_name'] ?? 'مبدأ'} ← ${transaction['to_account_name'] ?? 'مقصد'}\\n'
                     '${_moneyText((transaction['amount'] as num).toInt())} ریال'
                     '${fee > 0 ? ' • کارمزد: ${_moneyText(fee)} ریال' : ''}'
-                : '${income ? 'دریافت' : 'پرداخت'} • '
+                : '${income ? 'دریافت' : 'پرداخت'}$dateLabel • '
                     '${transaction['parent_name'] ?? transaction['category_name']}\\n'
                     'حساب: ${transaction['financial_account_name'] ?? 'کیف پول نقدی'}\\n'
                     '${_moneyText((transaction['amount'] as num).toInt())} ریال'
