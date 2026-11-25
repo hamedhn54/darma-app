@@ -443,157 +443,414 @@ class _DarmaHomeState extends State<DarmaHome> {
                 label: const Text('ثبت تراکنش'),
               )
             : null,
-        bottomNavigationBar: NavigationBar(
-          selectedIndex: _tab,
-          onDestinationSelected: (v) => setState(() => _tab = v),
-          destinations: const [
-            NavigationDestination(
-                icon: Icon(Icons.home_outlined),
-                selectedIcon: Icon(Icons.home),
-                label: 'خانه'),
-            NavigationDestination(
-                icon: Icon(Icons.receipt_long_outlined),
-                selectedIcon: Icon(Icons.receipt_long),
-                label: 'تراکنش‌ها'),
-            NavigationDestination(
-                icon: Icon(Icons.query_stats_outlined),
-                selectedIcon: Icon(Icons.query_stats),
-                label: 'گزارش‌ها'),
-            NavigationDestination(
-                icon: Icon(Icons.grid_view_rounded),
-                selectedIcon: Icon(Icons.grid_view),
-                label: 'بیشتر'),
-          ],
+        bottomNavigationBar: Container(
+          decoration: BoxDecoration(
+            color: Theme.of(context).colorScheme.surface,
+            border: Border(
+              top: BorderSide(
+                color: Theme.of(context).colorScheme.outline.withValues(alpha: .38),
+              ),
+            ),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withValues(
+                  alpha: Theme.of(context).brightness == Brightness.dark ? .18 : .045,
+                ),
+                blurRadius: 22,
+                offset: const Offset(0, -6),
+              ),
+            ],
+          ),
+          child: NavigationBar(
+            height: 76,
+            elevation: 0,
+            backgroundColor: Colors.transparent,
+            indicatorColor: Theme.of(context).colorScheme.primary.withValues(alpha: .14),
+            indicatorShape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(15),
+            ),
+            labelBehavior: NavigationDestinationLabelBehavior.alwaysShow,
+            selectedIndex: _tab,
+            onDestinationSelected: (v) => setState(() => _tab = v),
+            destinations: const [
+              NavigationDestination(
+                icon: Icon(Icons.home_outlined, size: 22),
+                selectedIcon: Icon(Icons.home_rounded, size: 23),
+                label: 'خانه',
+              ),
+              NavigationDestination(
+                icon: Icon(Icons.receipt_long_outlined, size: 22),
+                selectedIcon: Icon(Icons.receipt_long_rounded, size: 23),
+                label: 'تراکنش‌ها',
+              ),
+              NavigationDestination(
+                icon: Icon(Icons.query_stats_outlined, size: 22),
+                selectedIcon: Icon(Icons.query_stats_rounded, size: 23),
+                label: 'گزارش‌ها',
+              ),
+              NavigationDestination(
+                icon: Icon(Icons.grid_view_outlined, size: 22),
+                selectedIcon: Icon(Icons.grid_view_rounded, size: 23),
+                label: 'بیشتر',
+              ),
+            ],
+          ),
         ),
       ),
     );
   }
 
-  Widget _dashboard() => RefreshIndicator(
-        onRefresh: _refresh,
-        child: ListView(
-          padding: const EdgeInsets.fromLTRB(18, 12, 18, 100),
-          children: [
-            Text(
-              'نمای کلی دارایی',
-              style: Theme.of(context)
-                  .textTheme
-                  .titleLarge
-                  ?.copyWith(fontWeight: FontWeight.w800),
-            ),
-            const SizedBox(height: 14),
-            Container(
-              padding: const EdgeInsets.all(22),
-              decoration: BoxDecoration(
-                borderRadius: BorderRadius.circular(28),
-                gradient: LinearGradient(
-                  colors: [
-                    Theme.of(context).colorScheme.primary,
-                    Theme.of(context).colorScheme.secondary,
-                    Theme.of(context).colorScheme.primary.withValues(alpha: .82),
-                  ],
-                  stops: const [0, .58, 1],
-                  begin: Alignment.topRight,
-                  end: Alignment.bottomLeft,
-                ),
-                boxShadow: [
-                  BoxShadow(
-                    color: Theme.of(context).colorScheme.primary.withValues(alpha: .20),
-                    blurRadius: 24,
-                    offset: const Offset(0, 12),
-                  ),
-                ],
-              ),
-              child: DefaultTextStyle(
-                style: TextStyle(color: Theme.of(context).brightness == Brightness.dark ? const Color(0xFF101827) : Colors.white),
+  Widget _dashboard() {
+    final now = DateTime.now();
+    final jalaliNow = Jalali.fromDateTime(now);
+    final monthTransactions = _transactions.where((transaction) {
+      final raw = transaction['created_at'] as String?;
+      if (raw == null) return false;
+      final date = DateTime.tryParse(raw)?.toLocal();
+      if (date == null) return false;
+      final jalaliDate = Jalali.fromDateTime(date);
+      return jalaliDate.year == jalaliNow.year &&
+          jalaliDate.month == jalaliNow.month;
+    });
+    final monthlyIncome = monthTransactions
+        .where((transaction) => transaction['kind'] == 'income')
+        .fold<int>(0, (sum, transaction) =>
+            sum + ((transaction['amount'] as num?)?.toInt() ?? 0));
+    final monthlyExpense = monthTransactions
+        .where((transaction) => transaction['kind'] == 'expense')
+        .fold<int>(0, (sum, transaction) =>
+            sum + ((transaction['amount'] as num?)?.toInt() ?? 0) +
+                ((transaction['fee'] as num?)?.toInt() ?? 0));
+    final accent = Theme.of(context).colorScheme.primary;
+    final dark = Theme.of(context).brightness == Brightness.dark;
+    final monthNames = const [
+      'فروردین', 'اردیبهشت', 'خرداد', 'تیر', 'مرداد', 'شهریور',
+      'مهر', 'آبان', 'آذر', 'دی', 'بهمن', 'اسفند'
+    ];
+
+    return RefreshIndicator(
+      onRefresh: _refresh,
+      color: accent,
+      child: ListView(
+        physics: const AlwaysScrollableScrollPhysics(),
+        padding: const EdgeInsets.fromLTRB(18, 12, 18, 116),
+        children: [
+          Row(
+            crossAxisAlignment: CrossAxisAlignment.center,
+            children: [
+              Expanded(
                 child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Row(
-                    children: [
-                      const Expanded(child: Text('موجودی خالص حساب‌های نقدی', style: TextStyle(fontWeight: FontWeight.w700))),
-                      Icon(Icons.account_balance_wallet_rounded, color: Theme.of(context).brightness == Brightness.dark ? const Color(0xFF101827).withValues(alpha: .75) : Colors.white70),
-                    ],
-                  ),
-                  const SizedBox(height: 10),
-                  DropdownButtonFormField<int?>(
-                    value: _selectedCashAccountId,
-                    isExpanded: true,
-                    decoration: const InputDecoration(
-                      labelText: 'نمایش موجودی',
-                      border: OutlineInputBorder(),
-                      contentPadding: EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-                    ),
-                    items: [
-                      const DropdownMenuItem<int?>(value: null, child: Text('همه حساب‌ها')),
-                      ..._cashAccounts.map((account) => DropdownMenuItem<int?>(
-                        value: account['id'] as int,
-                        child: Text(
-                          '${account['name']}${account['bank_name'] == null ? '' : ' • ${account['bank_name']}'}',
-                          overflow: TextOverflow.ellipsis,
-                        ),
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text('داشبورد مالی',
+                      style: Theme.of(context).textTheme.headlineSmall?.copyWith(
+                        fontWeight: FontWeight.w900,
+                        letterSpacing: -.4,
                       )),
-                    ],
-                    onChanged: (value) => setState(() => _selectedCashAccountId = value),
-                  ),
-                  const SizedBox(height: 14),
-                  Text(
-                    '${_moneyText(_displayBalance)} ریال',
-                    style: Theme.of(context)
-                        .textTheme
-                        .headlineMedium
-                        ?.copyWith(fontWeight: FontWeight.w900),
-                  ),
-                  const SizedBox(height: 8),
-                  Text('ذخیره‌سازی محلی روی همین دستگاه',
-                      style: TextStyle(fontSize: 12, color: Theme.of(context).brightness == Brightness.dark ? const Color(0xFF101827).withValues(alpha: .72) : Colors.white70)),
-                ],
-              ),
-              ),
-            ),
-            const SizedBox(height: 22),
-            Row(
-              children: [
-                Expanded(
-                  child: _actionTile('دریافت', Icons.south_west_rounded,
-                      Colors.green, () => _newTransaction(kind: 'income')),
+                    const SizedBox(height: 4),
+                    Text(
+                      '${monthNames[jalaliNow.month - 1]} ${_digits(jalaliNow.year.toString())}  •  نمای کلی امور مالی',
+                      style: TextStyle(
+                        fontSize: 11,
+                        height: 1.5,
+                        color: Theme.of(context).colorScheme.onSurfaceVariant,
+                        fontWeight: FontWeight.w500,
+                      ),
+                    ),
+                  ],
                 ),
-                const SizedBox(width: 10),
-                Expanded(
-                  child: _actionTile('پرداخت', Icons.north_east_rounded,
-                      Colors.redAccent, () => _newTransaction(kind: 'expense')),
+              ),
+              Container(
+                width: 44,
+                height: 44,
+                decoration: BoxDecoration(
+                  color: accent.withValues(alpha: .10),
+                  borderRadius: BorderRadius.circular(15),
+                  border: Border.all(color: accent.withValues(alpha: .22)),
                 ),
-                const SizedBox(width: 10),
-                Expanded(
-                  child: _actionTile('انتقال', Icons.sync_alt_rounded,
-                      Colors.orange, () => _newTransfer()),
+                child: Icon(Icons.insights_rounded, color: accent, size: 22),
+              ),
+            ],
+          ),
+          const SizedBox(height: 18),
+          Container(
+            padding: const EdgeInsets.fromLTRB(20, 19, 20, 20),
+            decoration: BoxDecoration(
+              borderRadius: BorderRadius.circular(28),
+              gradient: const LinearGradient(
+                colors: [Color(0xFF101C2D), Color(0xFF1B3448), Color(0xFF142536)],
+                begin: Alignment.topRight,
+                end: Alignment.bottomLeft,
+                stops: [0, .58, 1],
+              ),
+              border: Border.all(color: const Color(0xFFD6B36A).withValues(alpha: .28)),
+              boxShadow: const [
+                BoxShadow(
+                  color: Color(0x24101C2D),
+                  blurRadius: 25,
+                  offset: Offset(0, 12),
                 ),
               ],
             ),
-            const SizedBox(height: 24),
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(
-                  'آخرین تراکنش‌ها',
-                  style: Theme.of(context)
-                      .textTheme
-                      .titleMedium
-                      ?.copyWith(fontWeight: FontWeight.bold),
+                Row(
+                  children: [
+                    Container(
+                      width: 36,
+                      height: 36,
+                      decoration: BoxDecoration(
+                        color: const Color(0xFFD6B36A).withValues(alpha: .15),
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      child: const Icon(Icons.account_balance_wallet_rounded,
+                        color: Color(0xFFE3C783), size: 19),
+                    ),
+                    const SizedBox(width: 10),
+                    const Expanded(
+                      child: Text('موجودی خالص حساب‌های نقدی',
+                        style: TextStyle(
+                          color: Color(0xFFE8EDF3),
+                          fontSize: 13,
+                          fontWeight: FontWeight.w700,
+                        )),
+                    ),
+                    const Icon(Icons.verified_user_outlined,
+                      color: Color(0xFF8DA4B7), size: 17),
+                  ],
                 ),
-                TextButton(
-                  onPressed: () => setState(() => _tab = 1),
-                  child: const Text('مشاهده همه'),
+                const SizedBox(height: 15),
+                DropdownButtonFormField<int?>(
+                  value: _selectedCashAccountId,
+                  isExpanded: true,
+                  dropdownColor: const Color(0xFF1B3043),
+                  iconEnabledColor: const Color(0xFFE3C783),
+                  style: const TextStyle(
+                    color: Colors.white,
+                    fontSize: 12,
+                    fontWeight: FontWeight.w600,
+                  ),
+                  decoration: InputDecoration(
+                    labelText: 'حساب موردنظر',
+                    labelStyle: const TextStyle(color: Color(0xFFB6C3CF), fontSize: 11),
+                    filled: true,
+                    fillColor: Colors.white.withValues(alpha: .07),
+                    contentPadding: const EdgeInsets.symmetric(horizontal: 13, vertical: 2),
+                    enabledBorder: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(14),
+                      borderSide: BorderSide(color: Colors.white.withValues(alpha: .13)),
+                    ),
+                    focusedBorder: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(14),
+                      borderSide: const BorderSide(color: Color(0xFFD6B36A), width: 1.2),
+                    ),
+                  ),
+                  items: [
+                    const DropdownMenuItem<int?>(
+                      value: null,
+                      child: Text('مجموع همه حساب‌ها'),
+                    ),
+                    ..._cashAccounts.map((account) => DropdownMenuItem<int?>(
+                      value: account['id'] as int,
+                      child: Text(
+                        '${account['name']}${account['bank_name'] == null ? '' : ' • ${account['bank_name']}'}',
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                    )),
+                  ],
+                  onChanged: (value) =>
+                      setState(() => _selectedCashAccountId = value),
+                ),
+                const SizedBox(height: 17),
+                FittedBox(
+                  fit: BoxFit.scaleDown,
+                  alignment: Alignment.centerRight,
+                  child: Text(
+                    '${_moneyText(_displayBalance)}',
+                    maxLines: 1,
+                    style: const TextStyle(
+                      color: Colors.white,
+                      fontSize: 31,
+                      height: 1.25,
+                      fontWeight: FontWeight.w900,
+                      letterSpacing: -.6,
+                      fontFeatures: [ui.FontFeature.tabularFigures()],
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 4),
+                const Text('ریال',
+                  style: TextStyle(color: Color(0xFFD6B36A), fontSize: 12,
+                    fontWeight: FontWeight.w800)),
+                const SizedBox(height: 16),
+                Container(height: 1, color: Colors.white.withValues(alpha: .12)),
+                const SizedBox(height: 12),
+                Row(
+                  children: [
+                    const Icon(Icons.lock_outline_rounded,
+                      color: Color(0xFF8DA4B7), size: 14),
+                    const SizedBox(width: 6),
+                    const Expanded(
+                      child: Text('اطلاعات شما فقط روی همین دستگاه ذخیره می‌شود',
+                        style: TextStyle(color: Color(0xFFB6C3CF),
+                          fontSize: 10, fontWeight: FontWeight.w500)),
+                    ),
+                    Icon(Icons.refresh_rounded,
+                      color: const Color(0xFFD6B36A).withValues(alpha: .9), size: 16),
+                  ],
                 ),
               ],
             ),
-            if (_recent.isEmpty)
-              const _EmptyState(text: 'هنوز تراکنشی ثبت نشده است')
-            else
-              ..._recent.map((r) => _recentTile(r)),
-          ],
-        ),
-      );
+          ),
+          const SizedBox(height: 22),
+          Row(
+            children: [
+              Expanded(
+                child: _dashboardMetric(
+                  title: 'دریافت این ماه',
+                  amount: monthlyIncome,
+                  icon: Icons.south_west_rounded,
+                  color: const Color(0xFF35B78A),
+                  dark: dark,
+                ),
+              ),
+              const SizedBox(width: 11),
+              Expanded(
+                child: _dashboardMetric(
+                  title: 'پرداخت این ماه',
+                  amount: monthlyExpense,
+                  icon: Icons.north_east_rounded,
+                  color: const Color(0xFFE16B70),
+                  dark: dark,
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 24),
+          Row(
+            children: [
+              Expanded(
+                child: Text('عملیات سریع',
+                  style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                    fontWeight: FontWeight.w900,
+                    letterSpacing: -.2,
+                  )),
+              ),
+              Text('ثبت و مدیریت',
+                style: TextStyle(fontSize: 10, color: Theme.of(context).colorScheme.onSurfaceVariant)),
+            ],
+          ),
+          const SizedBox(height: 12),
+          Row(
+            children: [
+              Expanded(child: _actionTile('دریافت', Icons.south_west_rounded,
+                const Color(0xFF35B78A), () => _newTransaction(kind: 'income'))),
+              const SizedBox(width: 10),
+              Expanded(child: _actionTile('پرداخت', Icons.north_east_rounded,
+                const Color(0xFFE16B70), () => _newTransaction(kind: 'expense'))),
+              const SizedBox(width: 10),
+              Expanded(child: _actionTile('انتقال', Icons.swap_horiz_rounded,
+                const Color(0xFFD69B45), () => _newTransfer())),
+            ],
+          ),
+          const SizedBox(height: 25),
+          Row(
+            children: [
+              Expanded(
+                child: Text('آخرین تراکنش‌ها',
+                  style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                    fontWeight: FontWeight.w900,
+                  )),
+              ),
+              TextButton(
+                onPressed: () => setState(() => _tab = 1),
+                style: TextButton.styleFrom(
+                  foregroundColor: accent,
+                  textStyle: const TextStyle(fontSize: 11, fontWeight: FontWeight.w800),
+                ),
+                child: const Text('مشاهده همه  ←'),
+              ),
+            ],
+          ),
+          if (_recent.isEmpty)
+            const _EmptyState(text: 'هنوز تراکنشی ثبت نشده است')
+          else
+            ..._recent.map((transaction) => _recentTile(transaction)),
+        ],
+      ),
+    );
+  }
+
+  Widget _dashboardMetric({
+    required String title,
+    required int amount,
+    required IconData icon,
+    required Color color,
+    required bool dark,
+  }) {
+    final surface = Theme.of(context).colorScheme.surface;
+    final outline = Theme.of(context).colorScheme.outline;
+    return Container(
+      padding: const EdgeInsets.fromLTRB(13, 14, 13, 15),
+      decoration: BoxDecoration(
+        color: surface,
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(color: outline.withValues(alpha: .42)),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: dark ? .10 : .035),
+            blurRadius: 14,
+            offset: const Offset(0, 5),
+          ),
+        ],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Container(
+                width: 31,
+                height: 31,
+                decoration: BoxDecoration(
+                  color: color.withValues(alpha: .12),
+                  borderRadius: BorderRadius.circular(10),
+                ),
+                child: Icon(icon, color: color, size: 17),
+              ),
+              const Spacer(),
+              Icon(Icons.more_horiz_rounded,
+                color: Theme.of(context).colorScheme.onSurfaceVariant, size: 18),
+            ],
+          ),
+          const SizedBox(height: 12),
+          Text(title, style: TextStyle(
+            fontSize: 10,
+            color: Theme.of(context).colorScheme.onSurfaceVariant,
+            fontWeight: FontWeight.w600,
+          )),
+          const SizedBox(height: 5),
+          FittedBox(
+            fit: BoxFit.scaleDown,
+            alignment: Alignment.centerRight,
+            child: Text(_moneyText(amount),
+              maxLines: 1,
+              style: TextStyle(
+                color: Theme.of(context).colorScheme.onSurface,
+                fontSize: 18,
+                fontWeight: FontWeight.w900,
+                letterSpacing: -.3,
+                fontFeatures: const [ui.FontFeature.tabularFigures()],
+              )),
+          ),
+          const SizedBox(height: 3),
+          Text('ریال',
+            style: TextStyle(fontSize: 9, color: color, fontWeight: FontWeight.w800)),
+        ],
+      ),
+    );
+  }
 
   Widget _recentTile(Map<String, Object?> r) {
     final kind = r['kind'] as String;
@@ -641,20 +898,20 @@ class _DarmaHomeState extends State<DarmaHome> {
           String title, IconData icon, Color color, VoidCallback tap) =>
       Material(
         color: Theme.of(context).colorScheme.surface,
-        borderRadius: BorderRadius.circular(20),
+        borderRadius: BorderRadius.circular(19),
         child: InkWell(
           onTap: tap,
-          borderRadius: BorderRadius.circular(20),
+          borderRadius: BorderRadius.circular(19),
           child: Container(
-            padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 8),
+            padding: const EdgeInsets.symmetric(vertical: 15, horizontal: 5),
             decoration: BoxDecoration(
-              borderRadius: BorderRadius.circular(20),
+              borderRadius: BorderRadius.circular(19),
               border: Border.all(color: color.withValues(alpha: .22)),
               gradient: LinearGradient(
-                begin: Alignment.topCenter,
-                end: Alignment.bottomCenter,
+                begin: Alignment.topRight,
+                end: Alignment.bottomLeft,
                 colors: [
-                  color.withValues(alpha: .12),
+                  color.withValues(alpha: .105),
                   Theme.of(context).colorScheme.surface,
                 ],
               ),
@@ -662,17 +919,22 @@ class _DarmaHomeState extends State<DarmaHome> {
             child: Column(
               children: [
                 Container(
-                  width: 42,
-                  height: 42,
+                  width: 43,
+                  height: 43,
                   decoration: BoxDecoration(
-                    color: color.withValues(alpha: .15),
-                    borderRadius: BorderRadius.circular(14),
+                    color: color.withValues(alpha: .13),
+                    borderRadius: BorderRadius.circular(15),
+                    border: Border.all(color: color.withValues(alpha: .18)),
                   ),
                   alignment: Alignment.center,
-                  child: Icon(icon, color: color, size: 22),
+                  child: Icon(icon, color: color, size: 21),
                 ),
                 const SizedBox(height: 9),
-                Text(title, style: const TextStyle(fontWeight: FontWeight.w800)),
+                Text(title, style: const TextStyle(
+                  fontSize: 11,
+                  fontWeight: FontWeight.w900,
+                  letterSpacing: -.1,
+                )),
               ],
             ),
           ),
