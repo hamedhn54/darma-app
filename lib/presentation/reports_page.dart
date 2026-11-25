@@ -66,7 +66,7 @@ class _ReportsPageState extends State<ReportsPage> {
         return StatefulBuilder(builder: (context, setSheet) {
           final first = Jalali(year, month, 1).toDateTime();
           final length = Jalali(year, month, 1).monthLength;
-          selectedDay = selectedDay.clamp(1, length);
+          selectedDay = selectedDay.clamp(1, length).toInt();
           final cells = <int?>[...List<int?>.filled((first.weekday + 1) % 7, null), ...List<int>.generate(length, (i)=>i+1)];
           while(cells.length % 7 != 0){cells.add(null);}
           return Directionality(textDirection: TextDirection.rtl, child: SafeArea(child: Padding(
@@ -77,7 +77,15 @@ class _ReportsPageState extends State<ReportsPage> {
                 Text('${names[month-1]} ${fa(year.toString())}',style:const TextStyle(fontWeight:FontWeight.bold)),
                 IconButton(onPressed:()=>setSheet((){if(month==12){month=1;year++;}else{month++;}}),icon:const Icon(Icons.chevron_left)),
               ]),
-              Row(children:['ش','ی','د','س','چ','پ','ج'].map((x)=>Expanded(child:Center(child:Text(x,style:const TextStyle(fontWeight:FontWeight.bold)))).toList()),
+              Row(
+                children: ['ش','ی','د','س','چ','پ','ج']
+                    .map((x) => Expanded(
+                          child: Center(
+                            child: Text(x, style: const TextStyle(fontWeight: FontWeight.bold)),
+                          ),
+                        ))
+                    .toList(),
+              ),
               const SizedBox(height:8),
               GridView.builder(shrinkWrap:true,physics:const NeverScrollableScrollPhysics(),itemCount:cells.length,
                 gridDelegate:const SliverGridDelegateWithFixedCrossAxisCount(crossAxisCount:7),
@@ -97,7 +105,7 @@ class _ReportsPageState extends State<ReportsPage> {
   }
 
   Future<void> _chooseCompareDate(int periodIndex, bool isStart) async {
-    final current = periodIndex == 1 ? (isStart ? compareAStart : compareAEnd) : (isStart ? compareBStart : compareBEnd.subtract(const Duration(days:1)));
+    final current = periodIndex == 1 ? (isStart ? compareAStart : compareAEnd.subtract(const Duration(days:1))) : (isStart ? compareBStart : compareBEnd.subtract(const Duration(days:1)));
     final picked = await _pickJalaliDate(current);
     if(picked==null)return;
     setState((){
@@ -116,13 +124,30 @@ class _ReportsPageState extends State<ReportsPage> {
     try{
       final a=await DarmaDatabase.instance.getFinancialReport(startDate:compareAStart,endDate:compareAEnd,level:level,filterType:kind,selectedAccountId:accountId);
       final b=await DarmaDatabase.instance.getFinancialReport(startDate:compareBStart,endDate:compareBEnd,level:level,filterType:kind,selectedAccountId:accountId);
-      if(mounted)setState(()=>{comparisonA=a,comparisonB=b,comparing=false,error=null});
-    }catch(e){if(mounted)setState(()=>{comparing=false,error=e.toString()});}
+      if (mounted) {
+        setState(() {
+          comparisonA = a;
+          comparisonB = b;
+          comparing = false;
+          error = null;
+        });
+      }
+    } catch (e) {
+      if (mounted) {
+        setState(() {
+          comparing = false;
+          error = e.toString();
+        });
+      }
+    }
   }
 
-  int _value(Map<String,Object?>? data,String key)=>(data?[key] as num?)?.toInt()??0;
-  int _days(DateTime start,DateTime end)=>end.difference(start).inDays.clamp(1,1000000);
-  String _periodLabel(DateTime start,DateTime exclusiveEnd)=>'${jalali(start)} تا ${jalali(exclusiveEnd.subtract(const Duration(days:1)))}';
+  int _value(Map<String,Object?>? data, String key) {
+    if (key == 'net') return _value(data, 'income') - _value(data, 'expense');
+    return (data?[key] as num?)?.toInt() ?? 0;
+  }
+  int _days(DateTime start, DateTime end) =>
+      end.difference(start).inDays.clamp(1, 1000000).toInt();
 
   Widget _comparisonCard(){
     final a=comparisonA,b=comparisonB;
