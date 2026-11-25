@@ -855,7 +855,7 @@ class _DarmaHomeState extends State<DarmaHome> {
                         ),
                         items: financialAccounts.map((a) {
                           final bank = (a['bank_name'] as String?)?.trim();
-                          final balance = (a['opening_balance'] as num?)?.toInt() ?? 0;
+                          final balance = (a['balance'] as num?)?.toInt() ?? 0;
                           final label = [
                             a['name'] as String,
                             if (bank != null && bank.isNotEmpty) bank,
