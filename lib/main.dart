@@ -550,6 +550,7 @@ class _DarmaHomeState extends State<DarmaHome> {
                 ],
               ),
               ),
+            ),
             const SizedBox(height: 22),
             Row(
               children: [
