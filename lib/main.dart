@@ -644,23 +644,6 @@ class _DarmaHomeState extends State<DarmaHome> {
         ),
       );
 
-  Widget _simplePage(String title, IconData icon, String message) => Center(
-        child: Padding(
-          padding: const EdgeInsets.all(28),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Icon(icon,
-                  size: 48, color: Theme.of(context).colorScheme.primary),
-              const SizedBox(height: 16),
-              Text(title, style: Theme.of(context).textTheme.headlineSmall),
-              const SizedBox(height: 8),
-              Text(message, textAlign: TextAlign.center),
-            ],
-          ),
-        ),
-      );
-
   Widget _morePage() => ListView(
         padding: const EdgeInsets.all(18),
         children: [
