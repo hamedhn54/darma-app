@@ -11,7 +11,7 @@ class DarmaDatabase {
     final root = await getDatabasesPath();
     _db = await openDatabase(
       p.join(root, 'darma.db'),
-      version: 5,
+      version: 6,
       onConfigure: (db) async {
         await db.execute('PRAGMA foreign_keys = ON');
       },
@@ -48,6 +48,9 @@ class DarmaDatabase {
           await db.execute('ALTER TABLE accounts ADD COLUMN bank_name TEXT');
           await db.execute('ALTER TABLE accounts ADD COLUMN card_number TEXT');
           await db.execute('ALTER TABLE accounts ADD COLUMN opening_balance INTEGER NOT NULL DEFAULT 0');
+        }
+        if (oldVersion < 6) {
+          await db.execute("UPDATE accounts SET is_system = 1 WHERE type = 'expense' AND name = 'کارمزد بانکی'");
         }
       },
     );
@@ -158,7 +161,7 @@ class DarmaDatabase {
           'name': name,
           'type': group.key,
           'parent_id': rootId,
-          'is_system': name == 'کیف پول نقدی' ? 1 : 0,
+          'is_system': (name == 'کیف پول نقدی' || name == 'کارمزد بانکی') ? 1 : 0,
           'created_at': now,
         });
       }
@@ -183,46 +186,10 @@ class DarmaDatabase {
 
   Future<int> _bankFeeAccountId(DatabaseExecutor txn) async {
     final id = Sqflite.firstIntValue(await txn.rawQuery(
-      "SELECT id FROM accounts WHERE name = 'کارمزد بانکی' AND type = 'expense' LIMIT 1",
+      "SELECT id FROM accounts WHERE type = 'expense' AND is_system = 1 AND parent_id IS NOT NULL LIMIT 1",
     ));
     if (id == null) throw StateError('حساب کارمزد بانکی یافت نشد');
     return id;
-  }
-
-  Future<void> _checkDuplicate(
-    DatabaseExecutor txn, {
-    required String title,
-    required int amount,
-    required int fee,
-    required String kind,
-    int? categoryAccountId,
-    int? fromAccountId,
-    int? toAccountId,
-  }) async {
-    final cutoff =
-        DateTime.now().subtract(const Duration(minutes: 1)).toIso8601String();
-    if (kind != 'transfer' && categoryAccountId != null) {
-      final rows = await txn.rawQuery('''
-        SELECT COUNT(*) FROM journal_transactions t
-        WHERE t.title = ? AND t.amount = ? AND t.fee = ? AND t.kind = ? AND t.created_at >= ?
-          AND EXISTS (SELECT 1 FROM journal_entries e WHERE e.transaction_id = t.id AND e.account_id = ?)
-      ''', [title.trim(), amount, fee, kind, cutoff, categoryAccountId]);
-      if ((Sqflite.firstIntValue(rows) ?? 0) > 0) {
-        throw StateError('تراکنش مشابه در یک دقیقه اخیر ثبت شده است');
-      }
-    } else if (kind == 'transfer' &&
-        fromAccountId != null &&
-        toAccountId != null) {
-      final rows = await txn.rawQuery('''
-        SELECT COUNT(*) FROM journal_transactions t
-        WHERE t.title = ? AND t.amount = ? AND t.fee = ? AND t.kind = 'transfer' AND t.created_at >= ?
-          AND EXISTS (SELECT 1 FROM journal_entries e WHERE e.transaction_id = t.id AND e.account_id = ? AND e.credit > 0)
-          AND EXISTS (SELECT 1 FROM journal_entries e WHERE e.transaction_id = t.id AND e.account_id = ? AND e.debit > 0)
-      ''', [title.trim(), amount, fee, cutoff, fromAccountId, toAccountId]);
-      if ((Sqflite.firstIntValue(rows) ?? 0) > 0) {
-        throw StateError('انتقال مشابه در یک دقیقه اخیر ثبت شده است');
-      }
-    }
   }
 
   Future<void> _assertBalanced(DatabaseExecutor txn, int transactionId) async {
@@ -257,6 +224,7 @@ class DarmaDatabase {
     int? financialAccountId,
     int fee = 0,
   }) async {
+    if (title.trim().isEmpty) throw ArgumentError('شرح تراکنش الزامی است');
     if (amount <= 0) throw ArgumentError('مبلغ باید بیشتر از صفر باشد');
     if (fee < 0) throw ArgumentError('کارمزد نمی‌تواند منفی باشد');
     if (kind != 'income' && kind != 'expense')
@@ -266,13 +234,6 @@ class DarmaDatabase {
 
     final db = await database;
     await db.transaction((txn) async {
-      await _checkDuplicate(txn,
-          title: title,
-          amount: amount,
-          fee: fee,
-          kind: kind,
-          categoryAccountId: categoryAccountId);
-
       final selected = await txn.query(
         'accounts',
         where: 'id = ? AND type = ? AND parent_id IS NOT NULL',
@@ -456,13 +417,6 @@ class DarmaDatabase {
     final db = await database;
     await db.transaction((txn) async {
       await _validateAssetAccounts(txn, [fromAccountId, toAccountId]);
-      await _checkDuplicate(txn,
-          title: title,
-          amount: amount,
-          fee: fee,
-          kind: 'transfer',
-          fromAccountId: fromAccountId,
-          toAccountId: toAccountId);
 
       final id = await txn.insert('journal_transactions', {
         'title': title.trim(),
@@ -626,8 +580,14 @@ class DarmaDatabase {
         !const ['bank', 'cash', 'wallet', 'other'].contains(accountKind)) {
       throw ArgumentError('نوع حساب مالی نامعتبر است');
     }
+    if (accountKind != null && (type != 'asset' || parentId == null)) {
+      throw ArgumentError('اطلاعات مالی فقط برای تفصیلی دارایی مجاز است');
+    }
+    if ((bankName != null || cardNumber != null) && accountKind != 'bank') {
+      throw ArgumentError('اطلاعات بانک فقط برای حساب بانکی مجاز است');
+    }
     if (type != 'asset' &&
-        (accountKind != null || openingBalance != 0)) {
+        (accountKind != null || openingBalance != 0 || bankName != null || cardNumber != null)) {
       throw ArgumentError('اطلاعات حساب مالی فقط برای دارایی‌ها مجاز است');
     }
     if (!const ['asset', 'liability', 'income', 'expense'].contains(type)) {
@@ -651,6 +611,12 @@ class DarmaDatabase {
         }
         if (parents.first['parent_id'] == null) {
           throw StateError('امکان ایجاد تفصیلی زیر سرفصل اصلی وجود ندارد');
+        }
+        final grandparent = await txn.query(
+          'accounts', where: 'id = ?', whereArgs: [parents.first['parent_id']], limit: 1,
+        );
+        if (grandparent.isEmpty || grandparent.first['parent_id'] != null) {
+          throw StateError('ساختار حساب فقط تا سطح معین و تفصیلی مجاز است');
         }
         if (type == 'asset') {
           final used = Sqflite.firstIntValue(await txn.rawQuery(
@@ -716,6 +682,13 @@ class DarmaDatabase {
           rows.first['is_system'] == 1) {
         throw StateError('این حساب مالی قابل ویرایش نیست');
       }
+      final entryCount = Sqflite.firstIntValue(await txn.rawQuery(
+        'SELECT COUNT(*) FROM journal_entries WHERE account_id = ?', [id],
+      )) ?? 0;
+      final oldOpeningBalance = (rows.first['opening_balance'] as num?)?.toInt() ?? 0;
+      if (entryCount > 0 && openingBalance != oldOpeningBalance) {
+        throw StateError('این حساب گردش مالی دارد؛ اصلاح موجودی اولیه باید با سند اصلاحی انجام شود');
+      }
       final duplicate = Sqflite.firstIntValue(await txn.rawQuery(
         'SELECT COUNT(*) FROM accounts WHERE name = ? AND type = ? AND parent_id = ? AND id != ?',
         [cleanName, 'asset', rows.first['parent_id'], id],
@@ -750,8 +723,8 @@ class DarmaDatabase {
     if (rows.isEmpty || rows.first['is_system'] == 1)
       throw StateError('این حساب قابل ویرایش نیست');
     final duplicate = Sqflite.firstIntValue(await db.rawQuery(
-      'SELECT COUNT(*) FROM accounts WHERE name = ? AND type = ? AND id != ?',
-      [cleanName, rows.first['type'], id],
+      'SELECT COUNT(*) FROM accounts WHERE name = ? AND type = ? AND parent_id IS ? AND id != ?',
+      [cleanName, rows.first['type'], rows.first['parent_id'], id],
     ));
     if ((duplicate ?? 0) > 0) throw StateError('حسابی با این نام وجود دارد');
     await db.update('accounts', {'name': cleanName},
