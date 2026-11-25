@@ -61,4 +61,143 @@ void main() {
       );
     });
   });
+
+  group('TransactionJournal', () {
+    test('posts income as debit to asset and credit to income', () {
+      final entries = TransactionJournal.income(
+        financialAccountId: 1,
+        incomeAccountId: 2,
+        amount: 250000,
+      );
+      expect(entries, [
+        const LedgerEntry(accountId: 1, debit: 250000),
+        const LedgerEntry(accountId: 2, credit: 250000),
+      ]);
+      expect(LedgerDocument(entries).isBalanced, isTrue);
+    });
+
+    test('posts expense and bank fee separately', () {
+      final entries = TransactionJournal.expense(
+        financialAccountId: 1,
+        expenseAccountId: 2,
+        feeAccountId: 3,
+        amount: 100000,
+        fee: 2500,
+      );
+      expect(entries, [
+        const LedgerEntry(accountId: 2, debit: 100000),
+        const LedgerEntry(accountId: 3, debit: 2500),
+        const LedgerEntry(accountId: 1, credit: 102500),
+      ]);
+      expect(LedgerDocument(entries).isBalanced, isTrue);
+    });
+
+    test('posts expense without an extra fee line when fee is zero', () {
+      final entries = TransactionJournal.expense(
+        financialAccountId: 1,
+        expenseAccountId: 2,
+        feeAccountId: 0,
+        amount: 100000,
+      );
+      expect(entries, [
+        const LedgerEntry(accountId: 2, debit: 100000),
+        const LedgerEntry(accountId: 1, credit: 100000),
+      ]);
+      expect(LedgerDocument(entries).isBalanced, isTrue);
+    });
+
+    test('posts transfer with fee as a separate expense', () {
+      final entries = TransactionJournal.transfer(
+        fromAccountId: 1,
+        toAccountId: 2,
+        feeAccountId: 3,
+        amount: 50000,
+        fee: 1000,
+      );
+      expect(entries, [
+        const LedgerEntry(accountId: 1, credit: 51000),
+        const LedgerEntry(accountId: 2, debit: 50000),
+        const LedgerEntry(accountId: 3, debit: 1000),
+      ]);
+      expect(LedgerDocument(entries).isBalanced, isTrue);
+    });
+
+    test('posts transfer without a fee line when fee is zero', () {
+      final entries = TransactionJournal.transfer(
+        fromAccountId: 1,
+        toAccountId: 2,
+        feeAccountId: 0,
+        amount: 50000,
+      );
+      expect(entries, [
+        const LedgerEntry(accountId: 1, credit: 50000),
+        const LedgerEntry(accountId: 2, debit: 50000),
+      ]);
+      expect(LedgerDocument(entries).isBalanced, isTrue);
+    });
+
+    test('rejects same source and destination accounts', () {
+      expect(
+        () => TransactionJournal.transfer(
+          fromAccountId: 1,
+          toAccountId: 1,
+          amount: 100,
+        ),
+        throwsArgumentError,
+      );
+    });
+
+    test('rejects zero amounts, negative fees and invalid account ids', () {
+      expect(
+        () => TransactionJournal.income(
+          financialAccountId: 1,
+          incomeAccountId: 2,
+          amount: 0,
+        ),
+        throwsArgumentError,
+      );
+      expect(
+        () => TransactionJournal.expense(
+          financialAccountId: 1,
+          expenseAccountId: 2,
+          feeAccountId: 3,
+          amount: 100,
+          fee: -1,
+        ),
+        throwsArgumentError,
+      );
+      expect(
+        () => TransactionJournal.income(
+          financialAccountId: 0,
+          incomeAccountId: 2,
+          amount: 100,
+        ),
+        throwsArgumentError,
+      );
+    });
+
+    test('rejects fee account collisions and integer overflow', () {
+      expect(
+        () => TransactionJournal.transfer(
+          fromAccountId: 1,
+          toAccountId: 2,
+          feeAccountId: 1,
+          amount: 100,
+          fee: 1,
+        ),
+        throwsArgumentError,
+      );
+      expect(
+        () => TransactionJournal.expense(
+          financialAccountId: 1,
+          expenseAccountId: 2,
+          feeAccountId: 3,
+          amount: 9223372036854775807,
+          fee: 1,
+        ),
+        throwsArgumentError,
+      );
+    });
+  });
+
 }
