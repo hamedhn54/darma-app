@@ -717,6 +717,109 @@ class DarmaDatabase {
         where: 'id = ?', whereArgs: [id]);
   }
 
+  /// Returns income/expense analytics from balanced journal entries.
+  /// [level] can be total, main, or detail. Transfers are intentionally excluded.
+  Future<Map<String, Object?>> getFinancialReport({
+    required DateTime startDate,
+    required DateTime endDate,
+    String level = 'total',
+    String filterType = 'all',
+    int? selectedAccountId,
+  }) async {
+    if (!const ['total', 'main', 'detail'].contains(level)) {
+      throw ArgumentError('سطح گزارش نامعتبر است');
+    }
+    if (!const ['all', 'income', 'expense'].contains(filterType)) {
+      throw ArgumentError('نوع گزارش نامعتبر است');
+    }
+    final db = await database;
+    final start = DateTime(startDate.year, startDate.month, startDate.day)
+        .toIso8601String();
+    final end = DateTime(endDate.year, endDate.month, endDate.day)
+        .toIso8601String();
+
+    final summaryRows = await db.rawQuery('''
+      SELECT
+        COALESCE(SUM(CASE WHEN a.type = 'income' THEN e.credit - e.debit ELSE 0 END), 0) AS income,
+        COALESCE(SUM(CASE WHEN a.type = 'expense' THEN e.debit - e.credit ELSE 0 END), 0) AS expense,
+        COUNT(DISTINCT t.id) AS transaction_count
+      FROM journal_entries e
+      JOIN journal_transactions t ON t.id = e.transaction_id
+      JOIN accounts a ON a.id = e.account_id
+      LEFT JOIN accounts p ON p.id = a.parent_id
+      WHERE a.type IN ('income', 'expense')
+        AND t.kind IN ('income', 'expense')
+        AND t.created_at >= ? AND t.created_at < ?
+        AND (? = 'all' OR t.kind = ?)
+        AND (? IS NULL OR a.id = ? OR a.parent_id = ?)
+    ''', [
+      start, end, filterType, filterType,
+      selectedAccountId, selectedAccountId, selectedAccountId,
+    ]);
+    final summary = summaryRows.first;
+
+    final breakdown = await db.rawQuery('''
+      SELECT
+        CASE
+          WHEN ? = 'total' THEN 0
+          WHEN ? = 'main' THEN CASE WHEN p.parent_id IS NULL THEN a.id ELSE p.id END
+          ELSE a.id
+        END AS account_id,
+        CASE
+          WHEN ? = 'total' THEN CASE WHEN a.type = 'income' THEN 'درآمدها' ELSE 'هزینه‌ها' END
+          WHEN ? = 'main' THEN CASE WHEN p.parent_id IS NULL THEN a.name ELSE p.name END
+          ELSE a.name
+        END AS label,
+        a.type AS kind,
+        SUM(CASE WHEN a.type = 'income' THEN e.credit - e.debit ELSE e.debit - e.credit END) AS amount,
+        COUNT(DISTINCT t.id) AS transaction_count
+      FROM journal_entries e
+      JOIN journal_transactions t ON t.id = e.transaction_id
+      JOIN accounts a ON a.id = e.account_id
+      LEFT JOIN accounts p ON p.id = a.parent_id
+      WHERE a.type IN ('income', 'expense')
+        AND t.kind IN ('income', 'expense')
+        AND t.created_at >= ? AND t.created_at < ?
+        AND (? = 'all' OR t.kind = ?)
+        AND (? IS NULL OR a.id = ? OR a.parent_id = ?)
+      GROUP BY account_id, label, a.type
+      HAVING amount != 0
+      ORDER BY amount DESC
+    ''', [
+      level, level, level, level,
+      start, end, filterType, filterType,
+      selectedAccountId, selectedAccountId, selectedAccountId,
+    ]);
+
+    final trend = await db.rawQuery('''
+      SELECT
+        strftime('%Y-%m', t.created_at) AS month_key,
+        COALESCE(SUM(CASE WHEN a.type = 'income' THEN e.credit - e.debit ELSE 0 END), 0) AS income,
+        COALESCE(SUM(CASE WHEN a.type = 'expense' THEN e.debit - e.credit ELSE 0 END), 0) AS expense
+      FROM journal_entries e
+      JOIN journal_transactions t ON t.id = e.transaction_id
+      JOIN accounts a ON a.id = e.account_id
+      WHERE a.type IN ('income', 'expense')
+        AND t.kind IN ('income', 'expense')
+        AND t.created_at >= ? AND t.created_at < ?
+        AND (? = 'all' OR t.kind = ?)
+        AND (? IS NULL OR a.id = ? OR a.parent_id = ?)
+      GROUP BY month_key
+      ORDER BY month_key
+    ''', [
+      start, end, filterType, filterType,
+      selectedAccountId, selectedAccountId, selectedAccountId,
+    ]);
+
+    return {
+      'income': (summary['income'] as num?)?.toInt() ?? 0,
+      'expense': (summary['expense'] as num?)?.toInt() ?? 0,
+      'transaction_count': (summary['transaction_count'] as num?)?.toInt() ?? 0,
+      'breakdown': breakdown,
+      'trend': trend,
+    };
+  }
+
   Future<void> close() async {
     final current = _db;
     _db = null;
