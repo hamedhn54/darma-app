@@ -25,27 +25,27 @@ class _ReportsPageState extends State<ReportsPage> {
     for(var i=0;i<10;i++){s=s.replaceAll(a[i],b[i]);}
     return s;
   }
-  String money(int n)=>fa(n.abs().toString().replaceAllMapped(RegExp(r'(\d)(?=(\d{3})+(?!\d))'),(m)=>'\${m[1]},'));
-  String compact(double n)=>n.abs()>=1000000000?' \${(n/1000000000).toStringAsFixed(1)}B':n.abs()>=1000000?'\${(n/1000000).toStringAsFixed(1)}M':n.abs()>=1000?'\${(n/1000).toStringAsFixed(0)}K':n.toStringAsFixed(0);
-  String jalali(DateTime d){final j=Jalali.fromDateTime(d);return '\${fa(j.year.toString())}/\${fa(j.month.toString().padLeft(2,'0'))}/\${fa(j.day.toString().padLeft(2,'0'))}';}
+  String money(int n)=>fa(n.abs().toString().replaceAllMapped(RegExp(r'(\d)(?=(\d{3})+(?!\d))'),(m)=>'${m[1]},'));
+  String compact(double n)=>n.abs()>=1000000000?' ${(n/1000000000).toStringAsFixed(1)}B':n.abs()>=1000000?'${(n/1000000).toStringAsFixed(1)}M':n.abs()>=1000?'${(n/1000).toStringAsFixed(0)}K':n.toStringAsFixed(0);
+  String jalali(DateTime d){final j=Jalali.fromDateTime(d);return '${fa(j.year.toString())}/${fa(j.month.toString().padLeft(2,'0'))}/${fa(j.day.toString().padLeft(2,'0'))}';}
   Future<void> load() async {
     setState(()=>loading=true);
     try {
       final a=await DarmaDatabase.instance.getAccountSummaries();
       final r=await DarmaDatabase.instance.getFinancialReport(startDate:start,endDate:end,level:level,filterType:kind,selectedAccountId:accountId);
       if(!mounted)return;
-      setState(()=>{accounts=a.where((x)=>(x['type']=='income'||x['type']=='expense')&&x['parent_id']!=null).toList(),report=r,loading=false,error=null});
-    } catch(e){if(mounted)setState(()=>{error=e.toString(),loading=false});}
+      setState(() { accounts=a.where((x)=>(x['type']=='income'||x['type']=='expense')&&x['parent_id']!=null).toList(); report=r; loading=false; error=null; });
+    } catch(e){if(mounted)setState(() { error=e.toString(); loading=false; });}
   }
   @override void initState(){super.initState();load();}
   void setPeriod(String p){
     final n=DateTime.now();
-    setState(()=>{
-      period=p,accountId=null,
-      if(p=='month')...{start=DateTime(n.year,n.month,1),end=DateTime(n.year,n.month+1,1)}
-      else if(p=='quarter')...{start=DateTime(n.year,n.month-2,1),end=DateTime(n.year,n.month+1,1)}
-      else if(p=='year')...{start=DateTime(n.year,1,1),end=DateTime(n.year+1,1,1)}
-      else ...{start=DateTime(2000,1,1),end=DateTime(n.year,n.month,n.day+1)}
+    setState(() {
+      period=p; accountId=null;
+      if(p=='month'){start=DateTime(n.year,n.month,1);end=DateTime(n.year,n.month+1,1);}
+      else if(p=='quarter'){start=DateTime(n.year,n.month-2,1);end=DateTime(n.year,n.month+1,1);}
+      else if(p=='year'){start=DateTime(n.year,1,1);end=DateTime(n.year+1,1,1);}
+      else {start=DateTime(2000,1,1);end=DateTime(n.year,n.month,n.day+1);}
     });
     load();
   }
@@ -68,9 +68,9 @@ class _ReportsPageState extends State<ReportsPage> {
         chip('این ماه','month'),chip('سه ماه اخیر','quarter'),chip('امسال','year'),chip('کل دوره','all'),
         ActionChip(label:const Text('بازه دلخواه'),avatar:const Icon(Icons.date_range,size:17),onPressed:()async{
           final picked=await showDateRangePicker(context:context,firstDate:DateTime(2000),lastDate:DateTime.now().add(const Duration(days:365)),initialDateRange:DateTimeRange(start:start,end:end.subtract(const Duration(days:1))));
-          if(picked!=null){setState(()=>{start=picked.start,end=picked.end.add(const Duration(days:1)),period='custom'});load();}
+          if(picked!=null){setState(() { start=picked.start; end=picked.end.add(const Duration(days:1)); period='custom'; });load();}
         })]),
-        Text('\${jalali(start)} تا \${jalali(end.subtract(const Duration(days:1)))}',textAlign:TextAlign.center,style:TextStyle(color:Theme.of(context).colorScheme.primary,fontWeight:FontWeight.bold)))),
+        Text('${jalali(start)} تا ${jalali(end.subtract(const Duration(days:1)))}',textAlign:TextAlign.center,style:TextStyle(color:Theme.of(context).colorScheme.primary,fontWeight:FontWeight.bold)))),
       const SizedBox(height:10),
       card('تنظیمات تحلیل',Icons.tune,Column(crossAxisAlignment:CrossAxisAlignment.stretch,children:[
         const Text('سطح گزارش',style:TextStyle(fontWeight:FontWeight.bold)),const SizedBox(height:6),
@@ -94,12 +94,12 @@ class _ReportsPageState extends State<ReportsPage> {
         card('ترکیب درآمد و هزینه',Icons.donut_large,Column(children:[
           Align(alignment:Alignment.centerLeft,child:chartPicker()),const SizedBox(height:12),
           SizedBox(height:210,child:mainChart()),
-          Wrap(alignment:WrapAlignment.center,spacing:14,children:[legend('درآمد',green,'\${money(income)} ریال'),legend('هزینه',red,'\${money(expense)} ریال')])])),
+          Wrap(alignment:WrapAlignment.center,spacing:14,children:[legend('درآمد',green,'${money(income)} ریال'),legend('هزینه',red,'${money(expense)} ریال')])])),
         const SizedBox(height:12),
         card(level=='total'?'سهم درآمد و هزینه':level=='main'?'تفکیک حساب‌های معین':'تفکیک حساب‌های تفصیلی',Icons.pie_chart,
           rows.isEmpty?empty('در این بازه گردش مالی وجود ندارد'):Column(children:[
             SizedBox(height:225,child:breakdownChart()),
-            ...rows.take(8).map((r)=>legend(r['label'] as String,r['kind']=='income'?green:red,'\${money((r['amount'] as num).toInt())} ریال'))])),
+            ...rows.take(8).map((r)=>legend(r['label'] as String,r['kind']=='income'?green:red,'${money((r['amount'] as num).toInt())} ریال'))])),
         const SizedBox(height:12),
         card('روند ماهانه',Icons.show_chart,trends.isEmpty?empty('داده‌ای برای نمایش روند وجود ندارد'):SizedBox(height:230,child:trendChart())),
         const SizedBox(height:12),
@@ -109,8 +109,8 @@ class _ReportsPageState extends State<ReportsPage> {
             Container(width:8,height:34,decoration:BoxDecoration(color:inc?green:red,borderRadius:BorderRadius.circular(5))),
             const SizedBox(width:8),Expanded(child:Column(crossAxisAlignment:CrossAxisAlignment.start,children:[
               Text(r['label'] as String,style:const TextStyle(fontWeight:FontWeight.bold)),
-              Text('\${fa(c.toString())} تراکنش',style:const TextStyle(fontSize:10,color:Colors.grey))])),
-            Text('\${money(amount)} ریال',style:TextStyle(color:inc?green:red,fontSize:11,fontWeight:FontWeight.bold))]));}).toList()))
+              Text('${fa(c.toString())} تراکنش',style:const TextStyle(fontSize:10,color:Colors.grey))])),
+            Text('${money(amount)} ریال',style:TextStyle(color:inc?green:red,fontSize:11,fontWeight:FontWeight.bold))]));}).toList()))
       ]
     ]));
   }
