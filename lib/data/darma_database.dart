@@ -56,7 +56,8 @@ class DarmaDatabase {
           ));
           if (expenseRootId != null) {
             final feeCount = Sqflite.firstIntValue(await db.rawQuery(
-              "SELECT COUNT(*) FROM accounts WHERE type = 'expense' AND name = 'کارمزد بانکی'",
+              "SELECT COUNT(*) FROM accounts WHERE type = 'expense' AND name = 'کارمزد بانکی' AND parent_id = ?",
+              [expenseRootId],
             )) ?? 0;
             if (feeCount == 0) {
               await db.insert('accounts', {
@@ -69,7 +70,8 @@ class DarmaDatabase {
             }
           }
           await db.execute(
-            "UPDATE accounts SET is_system = 1 WHERE type = 'expense' AND name = 'کارمزد بانکی'",
+            "UPDATE accounts SET is_system = 1 WHERE type = 'expense' AND name = 'کارمزد بانکی' AND parent_id = ?",
+            [expenseRootId],
           );
         }
       },
@@ -206,7 +208,7 @@ class DarmaDatabase {
 
   Future<int> _bankFeeAccountId(DatabaseExecutor txn) async {
     final id = Sqflite.firstIntValue(await txn.rawQuery(
-      "SELECT id FROM accounts WHERE type = 'expense' AND is_system = 1 AND parent_id IS NOT NULL LIMIT 1",
+      "SELECT id FROM accounts WHERE type = 'expense' AND is_system = 1 AND name = 'کارمزد بانکی' AND parent_id = (SELECT id FROM accounts WHERE type = 'expense' AND parent_id IS NULL LIMIT 1) LIMIT 1",
     ));
     if (id == null) throw StateError('حساب کارمزد بانکی یافت نشد');
     return id;
