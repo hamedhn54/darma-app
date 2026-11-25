@@ -11,6 +11,16 @@ class LedgerEntry {
       credit >= 0 &&
       !(debit > 0 && credit > 0) &&
       (debit > 0 || credit > 0);
+
+  @override
+  bool operator ==(Object other) =>
+      other is LedgerEntry &&
+      accountId == other.accountId &&
+      debit == other.debit &&
+      credit == other.credit;
+
+  @override
+  int get hashCode => Object.hash(accountId, debit, credit);
 }
 
 class LedgerDocument {
@@ -64,7 +74,7 @@ class TransactionJournal {
     required int financialAccountId,
     required int expenseAccountId,
     required int amount,
-    required int feeAccountId,
+    int feeAccountId = 0,
     int fee = 0,
   }) {
     _validateAmounts(amount, fee);
@@ -75,8 +85,8 @@ class TransactionJournal {
     }
     if (fee > 0) {
       _validateAccountId(feeAccountId);
-      if (feeAccountId == financialAccountId) {
-        throw ArgumentError('حساب کارمزد باید از حساب مالی جدا باشد');
+      if (feeAccountId == financialAccountId || feeAccountId == expenseAccountId) {
+        throw ArgumentError('حساب کارمزد باید از حساب مالی و هزینه جدا باشد');
       }
     }
     return [
@@ -90,7 +100,7 @@ class TransactionJournal {
     required int fromAccountId,
     required int toAccountId,
     required int amount,
-    required int feeAccountId,
+    int feeAccountId = 0,
     int fee = 0,
   }) {
     _validateAmounts(amount, fee);
