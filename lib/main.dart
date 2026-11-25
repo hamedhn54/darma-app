@@ -5,6 +5,7 @@ import 'package:intl/intl.dart';
 import 'package:shamsi_date/shamsi_date.dart';
 import 'data/darma_database.dart';
 import 'presentation/accounts_page.dart';
+import 'presentation/reports_page.dart';
 import 'presentation/widgets/amount_calculator.dart';
 
 void main() async {
@@ -297,8 +298,7 @@ class _DarmaHomeState extends State<DarmaHome> {
     final pages = [
       _dashboard(),
       _transactionsPage(),
-      _simplePage('گزارش‌ها', Icons.insights_rounded,
-          'گزارش‌های درآمد، هزینه و مانده حساب در حال آماده‌سازی است.'),
+      const ReportsPage(),
       _morePage(),
     ];
     return Directionality(
