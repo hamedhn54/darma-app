@@ -638,18 +638,40 @@ class _DarmaHomeState extends State<DarmaHome> {
 
   Widget _actionTile(
           String title, IconData icon, Color color, VoidCallback tap) =>
-      InkWell(
-        onTap: tap,
-        borderRadius: BorderRadius.circular(18),
-        child: Card(
-          child: Padding(
-            padding: const EdgeInsets.symmetric(vertical: 18),
+      Material(
+        color: Theme.of(context).colorScheme.surface,
+        borderRadius: BorderRadius.circular(20),
+        child: InkWell(
+          onTap: tap,
+          borderRadius: BorderRadius.circular(20),
+          child: Container(
+            padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 8),
+            decoration: BoxDecoration(
+              borderRadius: BorderRadius.circular(20),
+              border: Border.all(color: color.withValues(alpha: .22)),
+              gradient: LinearGradient(
+                begin: Alignment.topCenter,
+                end: Alignment.bottomCenter,
+                colors: [
+                  color.withValues(alpha: .12),
+                  Theme.of(context).colorScheme.surface,
+                ],
+              ),
+            ),
             child: Column(
               children: [
-                Icon(icon, color: color),
-                const SizedBox(height: 8),
-                Text(title,
-                    style: const TextStyle(fontWeight: FontWeight.w700)),
+                Container(
+                  width: 42,
+                  height: 42,
+                  decoration: BoxDecoration(
+                    color: color.withValues(alpha: .15),
+                    borderRadius: BorderRadius.circular(14),
+                  ),
+                  alignment: Alignment.center,
+                  child: Icon(icon, color: color, size: 22),
+                ),
+                const SizedBox(height: 9),
+                Text(title, style: const TextStyle(fontWeight: FontWeight.w800)),
               ],
             ),
           ),
