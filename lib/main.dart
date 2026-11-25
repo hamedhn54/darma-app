@@ -754,6 +754,7 @@ class _DarmaHomeState extends State<DarmaHome> {
           : ((existing['fee'] as num?)?.toInt() ?? 0).toString(),
     );
     final formKey = GlobalKey<FormState>();
+    var isSaving = false;
 
     final result = await showModalBottomSheet<bool>(
       context: context,
@@ -853,8 +854,11 @@ class _DarmaHomeState extends State<DarmaHome> {
                     ),
                     const SizedBox(height: 18),
                     FilledButton.icon(
-                      onPressed: () async {
-                        if (!formKey.currentState!.validate()) return;
+                      onPressed: isSaving
+                          ? null
+                          : () async {
+                        if (isSaving || !formKey.currentState!.validate()) return;
+                        setSheet(() => isSaving = true);
                         try {
                           final feeValue = _parseAmount(fee.text);
                           if (existing == null) {
@@ -878,6 +882,7 @@ class _DarmaHomeState extends State<DarmaHome> {
                           if (ctx.mounted) Navigator.pop(ctx, true);
                         } catch (error) {
                           if (ctx.mounted) {
+                            setSheet(() => isSaving = false);
                             ScaffoldMessenger.of(ctx).showSnackBar(
                               SnackBar(
                                 content: Text(error
@@ -889,8 +894,13 @@ class _DarmaHomeState extends State<DarmaHome> {
                         }
                       },
                       icon: const Icon(Icons.sync_alt),
-                      label: Text(
-                          existing == null ? 'ثبت انتقال' : 'ذخیره تغییرات'),
+                      label: isSaving
+                          ? const SizedBox(
+                              width: 18,
+                              height: 18,
+                              child: CircularProgressIndicator(strokeWidth: 2),
+                            )
+                          : Text(existing == null ? 'ثبت انتقال' : 'ذخیره تغییرات'),
                     ),
                   ],
                 ),
@@ -977,6 +987,7 @@ class _DarmaHomeState extends State<DarmaHome> {
           : ((existing['fee'] as num?)?.toInt() ?? 0).toString(),
     );
     final formKey = GlobalKey<FormState>();
+    var isSaving = false;
 
     final result = await showModalBottomSheet<bool>(
       context: context,
@@ -1146,9 +1157,13 @@ class _DarmaHomeState extends State<DarmaHome> {
                       ],
                       const SizedBox(height: 18),
                       FilledButton(
-                        onPressed: () async {
-                          if (!formKey.currentState!.validate() ||
+                        onPressed: isSaving
+                            ? null
+                            : () async {
+                          if (isSaving ||
+                              !formKey.currentState!.validate() ||
                               selectedCategoryId == null) return;
+                          setSheet(() => isSaving = true);
                           try {
                             final feeValue = selected == 'expense'
                                 ? _parseAmount(fee.text)
@@ -1177,6 +1192,7 @@ class _DarmaHomeState extends State<DarmaHome> {
                             if (ctx.mounted) Navigator.pop(ctx, true);
                           } catch (error) {
                             if (ctx.mounted) {
+                              setSheet(() => isSaving = false);
                               ScaffoldMessenger.of(ctx).showSnackBar(
                                 SnackBar(
                                   content: Text(error
@@ -1187,8 +1203,13 @@ class _DarmaHomeState extends State<DarmaHome> {
                             }
                           }
                         },
-                        child: Text(
-                            existing == null ? 'ثبت تراکنش' : 'ذخیره تغییرات'),
+                        child: isSaving
+                            ? const SizedBox(
+                                width: 18,
+                                height: 18,
+                                child: CircularProgressIndicator(strokeWidth: 2),
+                              )
+                            : Text(existing == null ? 'ثبت تراکنش' : 'ذخیره تغییرات'),
                       ),
                     ],
                   ),
