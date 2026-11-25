@@ -36,7 +36,8 @@ void main() {
   }
 
   setUp(() async {
-    database = DarmaDatabase.forTesting(databasePath: inMemoryDatabasePath);
+    final uniquePath = 'darma_integration_${DateTime.now().microsecondsSinceEpoch}.db';
+    database = DarmaDatabase.forTesting(databasePath: uniquePath);
     rawDatabase = await database.database;
 
     final bankGroupId = await findAccountId('حساب بانکی', 'asset');
@@ -70,6 +71,10 @@ void main() {
       parentId: expenseGroupId,
     );
     feeAccountId = await findAccountId('کارمزد بانکی', 'expense');
+  });
+
+  tearDown(() async {
+    await database.close();
   });
 
   group('DarmaDatabase SQLite integration', () {
