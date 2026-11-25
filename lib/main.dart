@@ -62,6 +62,7 @@ class _DarmaHomeState extends State<DarmaHome> {
   int _tab = 0;
   int _balance = 0;
   List<Map<String, Object?>> _recent = [];
+  List<Map<String, Object?>> _transactions = [];
   final _money = NumberFormat('#,###', 'en_US');
 
   @override
@@ -77,7 +78,8 @@ class _DarmaHomeState extends State<DarmaHome> {
     ''');
     final total = rows.fold<int>(0, (s, r) => s + ((r['raw_balance'] as num?)?.toInt() ?? 0));
     final recent = await db.rawQuery('SELECT id, title, amount, kind, created_at FROM journal_transactions ORDER BY id DESC LIMIT 5');
-    if (mounted) setState(() { _balance = total; _recent = recent; });
+    final transactions = await DarmaDatabase.instance.getTransactions();
+    if (mounted) setState(() { _balance = total; _recent = recent; _transactions = transactions; });
   }
 
   String _digits(String s) => s.replaceAll('0','۰').replaceAll('1','۱').replaceAll('2','۲').replaceAll('3','۳').replaceAll('4','۴').replaceAll('5','۵').replaceAll('6','۶').replaceAll('7','۷').replaceAll('8','۸').replaceAll('9','۹');
@@ -97,7 +99,7 @@ class _DarmaHomeState extends State<DarmaHome> {
   Widget build(BuildContext context) {
     final pages = [
       _dashboard(),
-      _simplePage('تراکنش‌ها', Icons.swap_horiz_rounded, 'ثبت‌ها و گردش مالی شما در این بخش نمایش داده می‌شود.'),
+      _transactionsPage(),
       _simplePage('گزارش‌ها', Icons.insights_rounded, 'گزارش‌های درآمد، هزینه و مانده حساب در حال آماده‌سازی است.'),
       _morePage(),
     ];
@@ -169,6 +171,68 @@ class _DarmaHomeState extends State<DarmaHome> {
   Widget _actionTile(String title, IconData icon, Color color, VoidCallback tap) =>
       InkWell(onTap: tap, borderRadius: BorderRadius.circular(18), child: Card(child: Padding(padding: const EdgeInsets.symmetric(vertical: 18), child: Column(children: [Icon(icon, color: color), const SizedBox(height: 8), Text(title, style: const TextStyle(fontWeight: FontWeight.w700))]))));
 
+  Widget _transactionsPage() => RefreshIndicator(
+    onRefresh: _refresh,
+    child: _transactions.isEmpty
+        ? ListView(children: const [SizedBox(height: 180), _EmptyState(text: 'هنوز تراکنشی ثبت نشده است')])
+        : ListView.builder(
+            padding: const EdgeInsets.fromLTRB(14, 12, 14, 100),
+            itemCount: _transactions.length,
+            itemBuilder: (context, index) {
+              final transaction = _transactions[index];
+              final income = transaction['kind'] == 'income';
+              return Card(
+                child: ListTile(
+                  onTap: () => _newTransaction(existing: transaction),
+                  leading: CircleAvatar(
+                    backgroundColor: (income ? Colors.green : Colors.red).withValues(alpha: 0.14),
+                    child: Icon(income ? Icons.south_west : Icons.north_east, color: income ? Colors.green : Colors.red),
+                  ),
+                  title: Text(transaction['title'] as String, style: const TextStyle(fontWeight: FontWeight.w700)),
+                  subtitle: Text('${income ? 'دریافت' : 'پرداخت'} • ${transaction['parent_name'] ?? transaction['category_name']}'),
+                  trailing: PopupMenuButton<String>(
+                    onSelected: (value) async {
+                      if (value == 'edit') {
+                        await _newTransaction(existing: transaction);
+                      } else if (value == 'delete') {
+                        final confirm = await showDialog<bool>(
+                          context: context,
+                          builder: (dialogContext) => AlertDialog(
+                            title: const Text('حذف تراکنش'),
+                            content: Text('تراکنش «${transaction['title']}» حذف شود؟ این عملیات قابل بازگشت نیست.'),
+                            actions: [
+                              TextButton(onPressed: () => Navigator.pop(dialogContext, false), child: const Text('انصراف')),
+                              FilledButton.tonal(onPressed: () => Navigator.pop(dialogContext, true), child: const Text('حذف')),
+                            ],
+                          ),
+                        );
+                        if (confirm == true) {
+                          try {
+                            await DarmaDatabase.instance.deleteTransaction(transaction['id'] as int);
+                            await _refresh();
+                          } catch (error) {
+                            _notice(error.toString());
+                          }
+                        }
+                      }
+                    },
+                    itemBuilder: (_) => const [
+                      PopupMenuItem(value: 'edit', child: Text('ویرایش')),
+                      PopupMenuItem(value: 'delete', child: Text('حذف')),
+                    ],
+                  ),
+                  isThreeLine: false,
+                  dense: false,
+                  subtitleTextStyle: TextStyle(color: Theme.of(context).colorScheme.onSurfaceVariant),
+                  titleAlignment: ListTileTitleAlignment.center,
+                  // Amount is displayed on a separate line to keep long titles readable.
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                ),
+              );
+            },
+          ),
+  );
+
   Widget _simplePage(String title, IconData icon, String message) => Center(child: Padding(padding: const EdgeInsets.all(28), child: Column(mainAxisSize: MainAxisSize.min, children: [Icon(icon, size: 48, color: Theme.of(context).colorScheme.primary), const SizedBox(height: 16), Text(title, style: Theme.of(context).textTheme.headlineSmall), const SizedBox(height: 8), Text(message, textAlign: TextAlign.center)])));
 
   Widget _morePage() => ListView(padding: const EdgeInsets.all(18), children: [
@@ -192,8 +256,8 @@ class _DarmaHomeState extends State<DarmaHome> {
     const SizedBox(height: 12),
   ]))));
 
-  Future<void> _newTransaction({String? kind}) async {
-    String selected = kind ?? 'expense';
+  Future<void> _newTransaction({String? kind, Map<String, Object?>? existing}) async {
+    String selected = kind ?? (existing?['kind'] as String? ?? 'expense');
     final accounts = await DarmaDatabase.instance.getAccountSummaries();
     List<Map<String, Object?>> categoryAccounts(String type) =>
         accounts.where((a) => a['type'] == type && a['parent_id'] == a['root_id']).toList();
@@ -202,15 +266,19 @@ class _DarmaHomeState extends State<DarmaHome> {
       _notice('ابتدا برای این سرفصل یک حساب معین تعریف کنید.');
       return;
     }
-    int selectedMainId = initialMains.first['id'] as int;
+    final oldCategoryId = existing?['category_account_id'] as int?;
+    final oldCategory = oldCategoryId == null ? null : accounts.where((a) => a['id'] == oldCategoryId).firstOrNull;
+    int selectedMainId = oldCategory == null
+        ? initialMains.first['id'] as int
+        : (oldCategory['parent_id'] == oldCategory['root_id'] ? oldCategory['id'] as int : oldCategory['parent_id'] as int);
     List<Map<String, Object?>> detailsFor(int mainId) =>
         accounts.where((a) => a['type'] == selected && a['parent_id'] == mainId).toList();
-    int? selectedDetailId = detailsFor(selectedMainId).isEmpty
-        ? null
-        : detailsFor(selectedMainId).first['id'] as int;
+    int? selectedDetailId = oldCategory != null && oldCategory['parent_id'] != oldCategory['root_id']
+        ? oldCategoryId
+        : (detailsFor(selectedMainId).isEmpty ? null : detailsFor(selectedMainId).first['id'] as int);
 
-    final title = TextEditingController();
-    final amount = TextEditingController();
+    final title = TextEditingController(text: existing?['title'] as String? ?? '');
+    final amount = TextEditingController(text: existing == null ? '' : (existing['amount'] as num).toString());
     final formKey = GlobalKey<FormState>();
     final result = await showModalBottomSheet<bool>(
       context: context,
@@ -232,7 +300,7 @@ class _DarmaHomeState extends State<DarmaHome> {
                     mainAxisSize: MainAxisSize.min,
                     crossAxisAlignment: CrossAxisAlignment.stretch,
                     children: [
-                      const Text('تراکنش جدید', style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold)),
+                      Text(existing == null ? 'تراکنش جدید' : 'ویرایش تراکنش', style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold)),
                       const SizedBox(height: 14),
                       SegmentedButton<String>(
                         segments: const [
@@ -301,12 +369,22 @@ class _DarmaHomeState extends State<DarmaHome> {
                         onPressed: () async {
                           if (!formKey.currentState!.validate() || selectedCategoryId == null) return;
                           try {
-                            await DarmaDatabase.instance.addSimpleTransaction(
-                              title: title.text.trim(),
-                              amount: _parseAmount(amount.text),
-                              kind: selected,
-                              categoryAccountId: selectedCategoryId,
-                            );
+                            if (existing == null) {
+                              await DarmaDatabase.instance.addSimpleTransaction(
+                                title: title.text.trim(),
+                                amount: _parseAmount(amount.text),
+                                kind: selected,
+                                categoryAccountId: selectedCategoryId,
+                              );
+                            } else {
+                              await DarmaDatabase.instance.updateSimpleTransaction(
+                                transactionId: existing['id'] as int,
+                                title: title.text.trim(),
+                                amount: _parseAmount(amount.text),
+                                kind: selected,
+                                categoryAccountId: selectedCategoryId,
+                              );
+                            }
                             if (ctx.mounted) Navigator.pop(ctx, true);
                           } catch (error) {
                             if (ctx.mounted) {
