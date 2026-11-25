@@ -725,6 +725,167 @@ class _DarmaHomeState extends State<DarmaHome> {
         ),
       );
 
+  Future<DateTime?> _showJalaliDatePicker(DateTime initialDate) async {
+    final initial = Jalali.fromDateTime(initialDate);
+    return showModalBottomSheet<DateTime>(
+      context: context,
+      isScrollControlled: true,
+      showDragHandle: true,
+      builder: (sheetContext) {
+        var year = initial.year;
+        var month = initial.month;
+        var selectedDay = initial.day;
+        const monthNames = [
+          'فروردین', 'اردیبهشت', 'خرداد', 'تیر', 'مرداد', 'شهریور',
+          'مهر', 'آبان', 'آذر', 'دی', 'بهمن', 'اسفند',
+        ];
+        return StatefulBuilder(
+          builder: (context, setSheet) {
+            final firstDay = Jalali(year, month, 1).toDateTime();
+            final leading = (firstDay.weekday + 1) % 7;
+            final monthLength = Jalali(year, month, 1).monthLength;
+            final cells = <int?>[
+              ...List<int?>.filled(leading, null),
+              ...List<int>.generate(monthLength, (index) => index + 1),
+            ];
+            while (cells.length % 7 != 0) {
+              cells.add(null);
+            }
+            return Directionality(
+              textDirection: ui.TextDirection.rtl,
+              child: SafeArea(
+                child: Padding(
+                  padding: const EdgeInsets.fromLTRB(18, 8, 18, 24),
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          IconButton(
+                            onPressed: () => setSheet(() {
+                              if (month == 1) {
+                                month = 12;
+                                year--;
+                              } else {
+                                month--;
+                              }
+                            }),
+                            icon: const Icon(Icons.chevron_right),
+                          ),
+                          Text(
+                            '${monthNames[month - 1]} ${_digits(year.toString())}',
+                            style: const TextStyle(
+                              fontWeight: FontWeight.bold,
+                              fontSize: 17,
+                            ),
+                          ),
+                          IconButton(
+                            onPressed: () => setSheet(() {
+                              if (month == 12) {
+                                month = 1;
+                                year++;
+                              } else {
+                                month++;
+                              }
+                            }),
+                            icon: const Icon(Icons.chevron_left),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 8),
+                      Row(
+                        children: ['ش', 'ی', 'د', 'س', 'چ', 'پ', 'ج']
+                            .map((day) => Expanded(
+                                  child: Center(
+                                    child: Text(
+                                      day,
+                                      style: const TextStyle(
+                                        fontWeight: FontWeight.bold,
+                                      ),
+                                    ),
+                                  ),
+                                ))
+                            .toList(),
+                      ),
+                      const SizedBox(height: 8),
+                      GridView.builder(
+                        shrinkWrap: true,
+                        physics: const NeverScrollableScrollPhysics(),
+                        itemCount: cells.length,
+                        gridDelegate:
+                            const SliverGridDelegateWithFixedCrossAxisCount(
+                          crossAxisCount: 7,
+                          mainAxisSpacing: 5,
+                          crossAxisSpacing: 5,
+                        ),
+                        itemBuilder: (context, index) {
+                          final day = cells[index];
+                          if (day == null) {
+                            return const SizedBox.shrink();
+                          }
+                          final selected = selectedDay == day;
+                          return InkWell(
+                            borderRadius: BorderRadius.circular(24),
+                            onTap: () => setSheet(() => selectedDay = day),
+                            child: Container(
+                              decoration: BoxDecoration(
+                                color: selected
+                                    ? Theme.of(context).colorScheme.primary
+                                    : null,
+                                shape: BoxShape.circle,
+                              ),
+                              alignment: Alignment.center,
+                              child: Text(
+                                _digits(day.toString()),
+                                style: TextStyle(
+                                  fontWeight: selected
+                                      ? FontWeight.bold
+                                      : FontWeight.normal,
+                                  color: selected
+                                      ? Theme.of(context).colorScheme.onPrimary
+                                      : null,
+                                ),
+                              ),
+                            ),
+                          );
+                        },
+                      ),
+                      const SizedBox(height: 16),
+                      SizedBox(
+                        width: double.infinity,
+                        child: FilledButton(
+                          onPressed: () => Navigator.pop(
+                            sheetContext,
+                            Jalali(year, month, selectedDay).toDateTime(),
+                          ),
+                          child: const Text('تأیید تاریخ'),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            );
+          },
+        );
+      },
+    );
+  }
+
+  Widget _transactionDateField(DateTime date, VoidCallback onTap) {
+    return Card(
+      margin: EdgeInsets.zero,
+      child: ListTile(
+        onTap: onTap,
+        leading: const Icon(Icons.calendar_month_rounded),
+        title: const Text('تاریخ تراکنش'),
+        subtitle: Text(_jalaliDateLabel(date)),
+        trailing: const Icon(Icons.edit_calendar_outlined),
+      ),
+    );
+  }
+
   Future<void> _newTransfer({Map<String, Object?>? existing}) async {
     final allAssets =
         await DarmaDatabase.instance.getTransactionAccounts('asset');
@@ -754,6 +915,8 @@ class _DarmaHomeState extends State<DarmaHome> {
           : ((existing['fee'] as num?)?.toInt() ?? 0).toString(),
     );
     final formKey = GlobalKey<FormState>();
+    var transactionDate = DateTime.tryParse(existing?['created_at'] as String? ?? '')?.toLocal() ?? DateTime.now();
+    transactionDate = DateTime(transactionDate.year, transactionDate.month, transactionDate.day, 12);
     var isSaving = false;
 
     final result = await showModalBottomSheet<bool>(
@@ -779,6 +942,13 @@ class _DarmaHomeState extends State<DarmaHome> {
                           fontSize: 20, fontWeight: FontWeight.bold),
                     ),
                     const SizedBox(height: 16),
+                    _transactionDateField(transactionDate, () async {
+                      final picked = await _showJalaliDatePicker(transactionDate);
+                      if (picked != null) {
+                        setSheet(() => transactionDate = DateTime(picked.year, picked.month, picked.day, 12));
+                      }
+                    }),
+                    const SizedBox(height: 12),
                     DropdownButtonFormField<int>(
                       value: fromId,
                       isExpanded: true,
@@ -868,6 +1038,7 @@ class _DarmaHomeState extends State<DarmaHome> {
                               fromAccountId: fromId,
                               toAccountId: toId,
                               fee: feeValue,
+                              transactionDate: transactionDate,
                             );
                           } else {
                             await DarmaDatabase.instance.updateTransfer(
@@ -877,6 +1048,7 @@ class _DarmaHomeState extends State<DarmaHome> {
                               fromAccountId: fromId,
                               toAccountId: toId,
                               fee: feeValue,
+                              transactionDate: transactionDate,
                             );
                           }
                           if (ctx.mounted) Navigator.pop(ctx, true);
@@ -987,6 +1159,8 @@ class _DarmaHomeState extends State<DarmaHome> {
           : ((existing['fee'] as num?)?.toInt() ?? 0).toString(),
     );
     final formKey = GlobalKey<FormState>();
+    var transactionDate = DateTime.tryParse(existing?['created_at'] as String? ?? '')?.toLocal() ?? DateTime.now();
+    transactionDate = DateTime(transactionDate.year, transactionDate.month, transactionDate.day, 12);
     var isSaving = false;
 
     final result = await showModalBottomSheet<bool>(
@@ -1041,6 +1215,13 @@ class _DarmaHomeState extends State<DarmaHome> {
                           });
                         },
                       ),
+                      const SizedBox(height: 14),
+                      _transactionDateField(transactionDate, () async {
+                        final picked = await _showJalaliDatePicker(transactionDate);
+                        if (picked != null) {
+                          setSheet(() => transactionDate = DateTime(picked.year, picked.month, picked.day, 12));
+                        }
+                      }),
                       const SizedBox(height: 14),
                       DropdownButtonFormField<int>(
                         value: selectedFinancialAccountId,
@@ -1176,6 +1357,7 @@ class _DarmaHomeState extends State<DarmaHome> {
                                 categoryAccountId: selectedCategoryId,
                                 financialAccountId: selectedFinancialAccountId,
                                 fee: feeValue,
+                                transactionDate: transactionDate,
                               );
                             } else {
                               await DarmaDatabase.instance
@@ -1187,6 +1369,7 @@ class _DarmaHomeState extends State<DarmaHome> {
                                 categoryAccountId: selectedCategoryId,
                                 financialAccountId: selectedFinancialAccountId,
                                 fee: feeValue,
+                                transactionDate: transactionDate,
                               );
                             }
                             if (ctx.mounted) Navigator.pop(ctx, true);
