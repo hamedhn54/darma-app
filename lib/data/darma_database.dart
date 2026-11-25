@@ -273,6 +273,7 @@ class DarmaDatabase {
     required int categoryAccountId,
     int? financialAccountId,
     int fee = 0,
+    DateTime? transactionDate,
   }) async {
     if (title.trim().isEmpty) throw ArgumentError('شرح تراکنش الزامی است');
     if (amount <= 0) throw ArgumentError('مبلغ باید بیشتر از صفر باشد');
@@ -310,7 +311,7 @@ class DarmaDatabase {
         'amount': amount,
         'fee': fee,
         'kind': kind,
-        'created_at': DateTime.now().toIso8601String(),
+        'created_at': (transactionDate ?? DateTime.now()).toIso8601String(),
       });
 
       final entries = kind == 'income'
@@ -340,6 +341,7 @@ class DarmaDatabase {
     required int categoryAccountId,
     int? financialAccountId,
     int fee = 0,
+    DateTime? transactionDate,
   }) async {
     if (title.trim().isEmpty) throw ArgumentError('شرح تراکنش الزامی است');
     if (amount <= 0) throw ArgumentError('مبلغ باید بیشتر از صفر باشد');
@@ -380,7 +382,8 @@ class DarmaDatabase {
 
       await txn.update(
         'journal_transactions',
-        {'title': title.trim(), 'amount': amount, 'fee': fee, 'kind': kind},
+        {'title': title.trim(), 'amount': amount, 'fee': fee, 'kind': kind,
+          'created_at': (transactionDate ?? DateTime.tryParse(rows.first['created_at'] as String? ?? '') ?? DateTime.now()).toIso8601String()},
         where: 'id = ?',
         whereArgs: [transactionId],
       );
@@ -413,6 +416,7 @@ class DarmaDatabase {
     required int fromAccountId,
     required int toAccountId,
     int fee = 0,
+    DateTime? transactionDate,
   }) async {
     if (title.trim().isEmpty) throw ArgumentError('شرح انتقال الزامی است');
     if (amount <= 0) throw ArgumentError('مبلغ باید بیشتر از صفر باشد');
@@ -429,7 +433,7 @@ class DarmaDatabase {
         'amount': amount,
         'fee': fee,
         'kind': 'transfer',
-        'created_at': DateTime.now().toIso8601String(),
+        'created_at': (transactionDate ?? DateTime.now()).toIso8601String(),
       });
 
       final entries = TransactionJournal.transfer(
@@ -452,6 +456,7 @@ class DarmaDatabase {
     required int fromAccountId,
     required int toAccountId,
     int fee = 0,
+    DateTime? transactionDate,
   }) async {
     if (title.trim().isEmpty) throw ArgumentError('شرح انتقال الزامی است');
     if (amount <= 0) throw ArgumentError('مبلغ باید بیشتر از صفر باشد');
@@ -471,7 +476,8 @@ class DarmaDatabase {
 
       await txn.update(
         'journal_transactions',
-        {'title': title.trim(), 'amount': amount, 'fee': fee},
+        {'title': title.trim(), 'amount': amount, 'fee': fee,
+          'created_at': (transactionDate ?? DateTime.tryParse(rows.first['created_at'] as String? ?? '') ?? DateTime.now()).toIso8601String()},
         where: 'id = ?',
         whereArgs: [transactionId],
       );
