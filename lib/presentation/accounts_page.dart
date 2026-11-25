@@ -148,18 +148,142 @@ class _AccountGroupPageState extends State<AccountGroupPage> {
   }
 
   Future<void> _addDetail(int parentId) async {
-    final name = await _nameDialog(title: 'تفصیلی جدید');
-    if (name == null) return;
-    try {
-      await DarmaDatabase.instance.createAccount(
-        name: name,
-        type: widget.type,
-        parentId: parentId,
-      );
-      await _load();
-    } catch (error) {
-      _message(_errorText(error));
+    if (widget.type != 'asset') {
+      final name = await _nameDialog(title: 'تفصیلی جدید');
+      if (name == null) return;
+      try {
+        await DarmaDatabase.instance.createAccount(
+          name: name, type: widget.type, parentId: parentId,
+        );
+        await _load();
+      } catch (error) {
+        _message(_errorText(error));
+      }
+      return;
     }
+
+    final name = TextEditingController();
+    final bank = TextEditingController();
+    final card = TextEditingController();
+    final opening = TextEditingController(text: '0');
+    String kind = 'bank';
+    final formKey = GlobalKey<FormState>();
+    final result = await showModalBottomSheet<bool>(
+      context: context,
+      isScrollControlled: true,
+      showDragHandle: true,
+      builder: (sheetContext) => StatefulBuilder(
+        builder: (sheetContext, setSheet) => Directionality(
+          textDirection: TextDirection.rtl,
+          child: Padding(
+            padding: EdgeInsets.fromLTRB(
+              20, 8, 20, MediaQuery.of(sheetContext).viewInsets.bottom + 24),
+            child: Form(
+              key: formKey,
+              child: SingleChildScrollView(
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    const Text('حساب مالی جدید',
+                      style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold)),
+                    const SizedBox(height: 16),
+                    DropdownButtonFormField<String>(
+                      value: kind,
+                      decoration: const InputDecoration(
+                        labelText: 'نوع حساب مالی', border: OutlineInputBorder()),
+                      items: const [
+                        DropdownMenuItem(value: 'bank', child: Text('حساب بانکی')),
+                        DropdownMenuItem(value: 'cash', child: Text('صندوق / وجه نقد')),
+                        DropdownMenuItem(value: 'wallet', child: Text('کیف پول الکترونیکی')),
+                        DropdownMenuItem(value: 'other', child: Text('سایر دارایی نقدی')),
+                      ],
+                      onChanged: (value) => setSheet(() => kind = value ?? 'bank'),
+                    ),
+                    const SizedBox(height: 12),
+                    TextFormField(
+                      controller: name,
+                      decoration: const InputDecoration(
+                        labelText: 'نام حساب (مثلاً حساب ملت اصلی)',
+                        border: OutlineInputBorder()),
+                      validator: (value) => value == null || value.trim().isEmpty
+                          ? 'نام حساب را وارد کنید' : null,
+                    ),
+                    if (kind == 'bank') ...[
+                      const SizedBox(height: 12),
+                      TextFormField(
+                        controller: bank,
+                        decoration: const InputDecoration(
+                          labelText: 'نام بانک', border: OutlineInputBorder()),
+                        validator: (value) => kind == 'bank' &&
+                            (value == null || value.trim().isEmpty)
+                            ? 'نام بانک را وارد کنید' : null,
+                      ),
+                      const SizedBox(height: 12),
+                      TextFormField(
+                        controller: card,
+                        keyboardType: TextInputType.number,
+                        decoration: const InputDecoration(
+                          labelText: 'شماره کارت (اختیاری)',
+                          border: OutlineInputBorder()),
+                      ),
+                    ],
+                    const SizedBox(height: 12),
+                    TextFormField(
+                      controller: opening,
+                      keyboardType: TextInputType.number,
+                      decoration: const InputDecoration(
+                        labelText: 'موجودی اولیه به ریال',
+                        helperText: 'در صورت نداشتن موجودی اولیه، صفر وارد کنید.',
+                        border: OutlineInputBorder()),
+                      validator: (value) {
+                        final normalized = (value ?? '').replaceAll(',', '').replaceAll('٬', '').trim();
+                        final parsed = int.tryParse(normalized);
+                        return parsed == null || parsed < 0
+                            ? 'موجودی اولیه معتبر وارد کنید' : null;
+                      },
+                    ),
+                    const SizedBox(height: 18),
+                    FilledButton(
+                      onPressed: () async {
+                        if (!formKey.currentState!.validate()) return;
+                        try {
+                          final openingValue = int.parse(
+                            opening.text.replaceAll(',', '').replaceAll('٬', '').trim());
+                          await DarmaDatabase.instance.createAccount(
+                            name: name.text.trim(),
+                            type: widget.type,
+                            parentId: parentId,
+                            accountKind: kind,
+                            bankName: kind == 'bank' ? bank.text.trim() : null,
+                            cardNumber: kind == 'bank' && card.text.trim().isNotEmpty
+                                ? card.text.trim() : null,
+                            openingBalance: openingValue,
+                          );
+                          if (sheetContext.mounted) Navigator.pop(sheetContext, true);
+                        } catch (error) {
+                          if (sheetContext.mounted) {
+                            ScaffoldMessenger.of(sheetContext).showSnackBar(
+                              SnackBar(content: Text(_errorText(error))),
+                            );
+                          }
+                        }
+                      },
+                      child: const Text('ثبت حساب مالی'),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+    name.dispose();
+    bank.dispose();
+    card.dispose();
+    opening.dispose();
+    if (result == true) await _load();
   }
 
   Future<void> _rename(Map<String, Object?> account) async {
@@ -204,6 +328,23 @@ class _AccountGroupPageState extends State<AccountGroupPage> {
     } catch (error) {
       _message(_errorText(error));
     }
+  }
+
+  Widget? _detailSubtitle(Map<String, Object?> account) {
+    if (widget.type != 'asset') return null;
+    final kind = account['account_kind'] as String?;
+    final bank = account['bank_name'] as String?;
+    final card = account['card_number'] as String?;
+    final balance = (account['balance'] as num?)?.toInt() ?? 0;
+    final parts = <String>[];
+    if (kind == 'bank' && bank != null && bank.isNotEmpty) parts.add(bank);
+    if (kind == 'cash') parts.add('صندوق');
+    if (kind == 'wallet') parts.add('کیف پول');
+    if (card != null && card.isNotEmpty) {
+      parts.add('کارت **** ${card.length > 4 ? card.substring(card.length - 4) : card}');
+    }
+    parts.add('مانده: ${balance.toString()} ریال');
+    return Text(parts.join(' • '));
   }
 
   Widget _menu(Map<String, Object?> account) {
@@ -291,6 +432,7 @@ class _AccountGroupPageState extends State<AccountGroupPage> {
                                   Icons.subdirectory_arrow_left_rounded,
                                   size: 20),
                               title: Text(detail['name'] as String),
+                              subtitle: _detailSubtitle(detail),
                               trailing: _menu(detail),
                             ),
                           if (_detailsOf(main['id'] as int).isEmpty)
