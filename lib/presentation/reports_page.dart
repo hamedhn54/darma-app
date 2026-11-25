@@ -64,13 +64,16 @@ class _ReportsPageState extends State<ReportsPage> {
           const Text('تحلیل درآمد، هزینه و جریان مالی',style:TextStyle(fontSize:11,color:Colors.grey))])),
         IconButton(onPressed:load,icon:const Icon(Icons.refresh))]),
       const SizedBox(height:14),
-      card('بازه گزارش',Icons.calendar_month,Wrap(spacing:6,runSpacing:6,children:[
-        chip('این ماه','month'),chip('سه ماه اخیر','quarter'),chip('امسال','year'),chip('کل دوره','all'),
-        ActionChip(label:const Text('بازه دلخواه'),avatar:const Icon(Icons.date_range,size:17),onPressed:()async{
-          final picked=await showDateRangePicker(context:context,firstDate:DateTime(2000),lastDate:DateTime.now().add(const Duration(days:365)),initialDateRange:DateTimeRange(start:start,end:end.subtract(const Duration(days:1))));
-          if(picked!=null){setState(() { start=picked.start; end=picked.end.add(const Duration(days:1)); period='custom'; });load();}
-        })]),
-        Text('${jalali(start)} تا ${jalali(end.subtract(const Duration(days:1)))}',textAlign:TextAlign.center,style:TextStyle(color:Theme.of(context).colorScheme.primary,fontWeight:FontWeight.bold)))),
+      card('بازه گزارش',Icons.calendar_month,Column(crossAxisAlignment:CrossAxisAlignment.stretch,children:[
+        Wrap(spacing:6,runSpacing:6,children:[
+          chip('این ماه','month'),chip('سه ماه اخیر','quarter'),chip('امسال','year'),chip('کل دوره','all'),
+          ActionChip(label:const Text('بازه دلخواه'),avatar:const Icon(Icons.date_range,size:17),onPressed:()async{
+            final picked=await showDateRangePicker(context:context,firstDate:DateTime(2000),lastDate:DateTime.now().add(const Duration(days:365)),initialDateRange:DateTimeRange(start:start,end:end.subtract(const Duration(days:1))));
+            if(picked!=null){setState(() { start=picked.start; end=picked.end.add(const Duration(days:1)); period='custom'; });load();}
+          })]),
+        const SizedBox(height:8),
+        Text('${jalali(start)} تا ${jalali(end.subtract(const Duration(days:1)))}',textAlign:TextAlign.center,style:TextStyle(color:Theme.of(context).colorScheme.primary,fontWeight:FontWeight.bold))
+      ])),
       const SizedBox(height:10),
       card('تنظیمات تحلیل',Icons.tune,Column(crossAxisAlignment:CrossAxisAlignment.stretch,children:[
         const Text('سطح گزارش',style:TextStyle(fontWeight:FontWeight.bold)),const SizedBox(height:6),
