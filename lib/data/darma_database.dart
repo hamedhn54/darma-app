@@ -711,6 +711,12 @@ class DarmaDatabase {
         where: 'id = ?', whereArgs: [id]);
   }
 
+  Future<void> close() async {
+    final current = _db;
+    _db = null;
+    if (current != null) await current.close();
+  }
+
   Future<void> deleteAccount(int id) async {
     final db = await database;
     final rows =
