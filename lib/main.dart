@@ -2,6 +2,7 @@ import 'dart:ui' as ui;
 import 'package:flutter/material.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:intl/intl.dart';
+import 'package:shamsi_date/shamsi_date.dart';
 import 'data/darma_database.dart';
 import 'presentation/accounts_page.dart';
 import 'presentation/widgets/amount_calculator.dart';
@@ -76,6 +77,9 @@ class DarmaHome extends StatefulWidget {
 class _DarmaHomeState extends State<DarmaHome> {
   int _tab = 0;
   int _balance = 0;
+  List<Map<String, Object?>> _cashAccounts = [];
+  int? _selectedCashAccountId;
+  DateTime? _selectedTransactionDate;
   List<Map<String, Object?>> _recent = [];
   List<Map<String, Object?>> _transactions = [];
   final _money = NumberFormat('#,###', 'en_US');
@@ -89,12 +93,20 @@ class _DarmaHomeState extends State<DarmaHome> {
   Future<void> _refresh() async {
     final db = await DarmaDatabase.instance.database;
     final rows = await db.rawQuery('''
-      SELECT a.id, a.name, a.type,
-        COALESCE(a.opening_balance, 0) + COALESCE(SUM(e.debit - e.credit), 0) AS raw_balance
+      SELECT a.id, a.name, a.account_kind, a.bank_name,
+        COALESCE(a.opening_balance, 0) +
+          COALESCE(SUM(e.debit - e.credit), 0) AS raw_balance
       FROM accounts a
       LEFT JOIN journal_entries e ON e.account_id = a.id
-      WHERE a.type = 'asset' AND a.parent_id IS NOT NULL
+      WHERE a.type = 'asset'
+        AND a.parent_id IS NOT NULL
+        AND NOT EXISTS (SELECT 1 FROM accounts child WHERE child.parent_id = a.id)
+        AND (
+          a.account_kind IS NOT NULL
+          OR a.name IN ('کیف پول نقدی', 'حساب بانکی', 'کیف پول الکترونیکی')
+        )
       GROUP BY a.id
+      ORDER BY a.parent_id, a.id
     ''');
     final total = rows.fold<int>(
         0, (s, r) => s + ((r['raw_balance'] as num?)?.toInt() ?? 0));
@@ -104,6 +116,11 @@ class _DarmaHomeState extends State<DarmaHome> {
     final transactions = await DarmaDatabase.instance.getTransactions();
     if (mounted) {
       setState(() {
+        _cashAccounts = rows;
+        if (_selectedCashAccountId != null &&
+            !rows.any((r) => r['id'] == _selectedCashAccountId)) {
+          _selectedCashAccountId = null;
+        }
         _balance = total;
         _recent = recent;
         _transactions = transactions;
@@ -124,6 +141,138 @@ class _DarmaHomeState extends State<DarmaHome> {
       .replaceAll('9', '۹');
 
   String _moneyText(int v) => _digits(_money.format(v));
+
+  int get _displayBalance {
+    if (_selectedCashAccountId == null) return _balance;
+    final account = _cashAccounts.firstWhere(
+      (a) => a['id'] == _selectedCashAccountId,
+      orElse: () => const <String, Object?>{},
+    );
+    return (account['raw_balance'] as num?)?.toInt() ?? 0;
+  }
+
+  List<Map<String, Object?>> get _visibleTransactions {
+    final selected = _selectedTransactionDate;
+    if (selected == null) return _transactions;
+    return _transactions.where((transaction) {
+      final raw = transaction['created_at'] as String?;
+      if (raw == null) return false;
+      final date = DateTime.tryParse(raw)?.toLocal();
+      return date != null && date.year == selected.year &&
+          date.month == selected.month && date.day == selected.day;
+    }).toList();
+  }
+
+  String _jalaliDateLabel(DateTime date) {
+    final j = Jalali.fromDateTime(date);
+    return '${_digits(j.year.toString())}/${_digits(j.month.toString().padLeft(2, '0'))}/${_digits(j.day.toString().padLeft(2, '0'))}';
+  }
+
+  Future<void> _pickTransactionDate() async {
+    final now = Jalali.now();
+    final initial = _selectedTransactionDate == null
+        ? now : Jalali.fromDateTime(_selectedTransactionDate!);
+    final picked = await showModalBottomSheet<DateTime>(
+      context: context, isScrollControlled: true, showDragHandle: true,
+      builder: (sheetContext) {
+        var month = initial.month;
+        var year = initial.year;
+        return StatefulBuilder(
+          builder: (sheetContext, setSheet) {
+            const monthNames = [
+              'فروردین', 'اردیبهشت', 'خرداد', 'تیر', 'مرداد', 'شهریور',
+              'مهر', 'آبان', 'آذر', 'دی', 'بهمن', 'اسفند'
+            ];
+            final firstDay = Jalali(year, month, 1).toDateTime();
+            final leading = (firstDay.weekday + 1) % 7;
+            final monthLength = Jalali(year, month, 1).monthLength;
+            final cells = <int?>[
+              ...List<int?>.filled(leading, null),
+              ...List<int>.generate(monthLength, (i) => i + 1),
+            ];
+            while (cells.length % 7 != 0) { cells.add(null); }
+            return Directionality(
+              textDirection: ui.TextDirection.rtl,
+              child: SafeArea(
+                child: Padding(
+                  padding: const EdgeInsets.fromLTRB(18, 8, 18, 24),
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          IconButton(
+                            onPressed: () => setSheet(() {
+                              if (month == 1) { month = 12; year--; } else { month--; }
+                            }),
+                            icon: const Icon(Icons.chevron_right)),
+                          Text('${monthNames[month - 1]} ${_digits(year.toString())}',
+                            style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 17)),
+                          IconButton(
+                            onPressed: () => setSheet(() {
+                              if (month == 12) { month = 1; year++; } else { month++; }
+                            }),
+                            icon: const Icon(Icons.chevron_left)),
+                        ],
+                      ),
+                      const SizedBox(height: 8),
+                      Row(
+                        children: ['ش', 'ی', 'د', 'س', 'چ', 'پ', 'ج']
+                          .map((day) => Expanded(child: Center(
+                            child: Text(day, style: const TextStyle(fontWeight: FontWeight.bold)))))
+                          .toList(),
+                      ),
+                      const SizedBox(height: 8),
+                      GridView.builder(
+                        shrinkWrap: true,
+                        physics: const NeverScrollableScrollPhysics(),
+                        itemCount: cells.length,
+                        gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+                          crossAxisCount: 7, mainAxisSpacing: 5, crossAxisSpacing: 5),
+                        itemBuilder: (context, index) {
+                          final day = cells[index];
+                          if (day == null) return const SizedBox.shrink();
+                          final selectedDate = _selectedTransactionDate == null
+                              ? null : Jalali.fromDateTime(_selectedTransactionDate!);
+                          final selected = selectedDate != null &&
+                              selectedDate.year == year && selectedDate.month == month &&
+                              selectedDate.day == day;
+                          return InkWell(
+                            borderRadius: BorderRadius.circular(24),
+                            onTap: () => Navigator.pop(sheetContext,
+                              Jalali(year, month, day).toDateTime()),
+                            child: Container(
+                              decoration: BoxDecoration(
+                                color: selected ? Theme.of(context).colorScheme.primary : null,
+                                shape: BoxShape.circle),
+                              alignment: Alignment.center,
+                              child: Text(_digits(day.toString()),
+                                style: TextStyle(
+                                  fontWeight: selected ? FontWeight.bold : FontWeight.normal,
+                                  color: selected ? Theme.of(context).colorScheme.onPrimary : null)),
+                            ),
+                          );
+                        },
+                      ),
+                      const SizedBox(height: 12),
+                      TextButton(
+                        onPressed: () => Navigator.pop(sheetContext, DateTime(1900, 1, 1)),
+                        child: const Text('پاک کردن فیلتر تاریخ')),
+                    ],
+                  ),
+                ),
+              ),
+            );
+          },
+        );
+      },
+    );
+    if (picked != null && mounted) {
+      setState(() => _selectedTransactionDate =
+          picked.year == 1900 ? null : DateTime(picked.year, picked.month, picked.day));
+    }
+  }
 
   int _parseAmount(String value) {
     const fa = '۰۱۲۳۴۵۶۷۸۹';
@@ -228,9 +377,30 @@ class _DarmaHomeState extends State<DarmaHome> {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   const Text('موجودی خالص حساب‌های نقدی'),
-                  const SizedBox(height: 12),
+                  const SizedBox(height: 10),
+                  DropdownButtonFormField<int?>(
+                    value: _selectedCashAccountId,
+                    isExpanded: true,
+                    decoration: const InputDecoration(
+                      labelText: 'نمایش موجودی',
+                      border: OutlineInputBorder(),
+                      contentPadding: EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                    ),
+                    items: [
+                      const DropdownMenuItem<int?>(value: null, child: Text('همه حساب‌ها')),
+                      ..._cashAccounts.map((account) => DropdownMenuItem<int?>(
+                        value: account['id'] as int,
+                        child: Text(
+                          '${account['name']}${account['bank_name'] == null ? '' : ' • ${account['bank_name']}'}',
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                      )),
+                    ],
+                    onChanged: (value) => setState(() => _selectedCashAccountId = value),
+                  ),
+                  const SizedBox(height: 14),
                   Text(
-                    '${_moneyText(_balance)} ریال',
+                    '${_moneyText(_displayBalance)} ریال',
                     style: Theme.of(context)
                         .textTheme
                         .headlineMedium
@@ -348,111 +518,119 @@ class _DarmaHomeState extends State<DarmaHome> {
 
   Widget _transactionsPage() => RefreshIndicator(
         onRefresh: _refresh,
-        child: _transactions.isEmpty
-            ? ListView(children: const [
-                SizedBox(height: 180),
-                _EmptyState(text: 'هنوز تراکنشی ثبت نشده است')
-              ])
-            : ListView.builder(
-                padding: const EdgeInsets.fromLTRB(14, 12, 14, 100),
-                itemCount: _transactions.length,
-                itemBuilder: (context, index) {
-                  final transaction = _transactions[index];
-                  final kind = transaction['kind'] as String;
-                  final income = kind == 'income';
-                  final transfer = kind == 'transfer';
-                  final fee = (transaction['fee'] as num?)?.toInt() ?? 0;
-                  final subtitle = transfer
-                      ? '${transaction['from_account_name'] ?? 'مبدأ'} ← ${transaction['to_account_name'] ?? 'مقصد'}\n'
-                          '${_moneyText((transaction['amount'] as num).toInt())} ریال'
-                          '${fee > 0 ? ' • کارمزد: ${_moneyText(fee)} ریال' : ''}'
-                      : '${income ? 'دریافت' : 'پرداخت'} • '
-                          '${transaction['parent_name'] ?? transaction['category_name']}\n'
-                          'حساب: ${transaction['financial_account_name'] ?? 'کیف پول نقدی'}\n'
-                          '${_moneyText((transaction['amount'] as num).toInt())} ریال'
-                          '${fee > 0 ? ' • کارمزد: ${_moneyText(fee)} ریال' : ''}';
-                  return Card(
-                    child: ListTile(
-                      onTap: transfer
-                          ? () => _newTransfer(existing: transaction)
-                          : () => _newTransaction(existing: transaction),
-                      leading: CircleAvatar(
-                        backgroundColor: (transfer
-                                ? Colors.orange
-                                : income
-                                    ? Colors.green
-                                    : Colors.red)
-                            .withValues(alpha: 0.14),
-                        child: Icon(
-                          transfer
-                              ? Icons.sync_alt
-                              : income
-                                  ? Icons.south_west
-                                  : Icons.north_east,
-                          color: transfer
-                              ? Colors.orange
-                              : income
-                                  ? Colors.green
-                                  : Colors.red,
+        child: ListView.builder(
+          padding: const EdgeInsets.fromLTRB(14, 12, 14, 100),
+          itemCount: _visibleTransactions.isEmpty ? 2 : _visibleTransactions.length + 1,
+          itemBuilder: (context, index) {
+            if (index == 0) {
+              return Card(
+                child: ListTile(
+                  leading: const Icon(Icons.calendar_month_rounded),
+                  title: Text(_selectedTransactionDate == null
+                      ? 'همه تاریخ‌ها'
+                      : 'تراکنش‌های ${_jalaliDateLabel(_selectedTransactionDate!)}'),
+                  subtitle: const Text('برای انتخاب روز موردنظر لمس کنید'),
+                  trailing: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      if (_selectedTransactionDate != null)
+                        IconButton(
+                          tooltip: 'حذف فیلتر تاریخ',
+                          onPressed: () => setState(() => _selectedTransactionDate = null),
+                          icon: const Icon(Icons.close),
                         ),
-                      ),
-                      title: Text(
-                        transaction['title'] as String,
-                        style: const TextStyle(fontWeight: FontWeight.w700),
-                      ),
-                      subtitle: Text(subtitle),
-                      trailing: PopupMenuButton<String>(
-                        onSelected: (value) async {
-                          if (value == 'edit') {
-                            if (transfer) {
-                              await _newTransfer(existing: transaction);
-                            } else {
-                              await _newTransaction(existing: transaction);
-                            }
-                          } else if (value == 'delete') {
-                            final confirm = await showDialog<bool>(
-                              context: context,
-                              builder: (dialogContext) => AlertDialog(
-                                title: const Text('حذف تراکنش'),
-                                content: Text(
-                                  'تراکنش «${transaction['title']}» حذف شود؟ این عملیات قابل بازگشت نیست.',
-                                ),
-                                actions: [
-                                  TextButton(
-                                    onPressed: () =>
-                                        Navigator.pop(dialogContext, false),
-                                    child: const Text('انصراف'),
-                                  ),
-                                  FilledButton.tonal(
-                                    onPressed: () =>
-                                        Navigator.pop(dialogContext, true),
-                                    child: const Text('حذف'),
-                                  ),
-                                ],
-                              ),
-                            );
-                            if (confirm == true) {
-                              try {
-                                await DarmaDatabase.instance.deleteTransaction(
-                                    transaction['id'] as int);
-                                await _refresh();
-                              } catch (error) {
-                                _notice(error.toString());
-                              }
-                            }
-                          }
-                        },
-                        itemBuilder: (_) => const [
-                          PopupMenuItem(value: 'edit', child: Text('ویرایش')),
-                          PopupMenuItem(value: 'delete', child: Text('حذف')),
-                        ],
-                      ),
-                      shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(16)),
-                    ),
-                  );
-                },
+                      const Icon(Icons.date_range_outlined),
+                    ],
+                  ),
+                  onTap: _pickTransactionDate,
+                ),
+              );
+            }
+            if (_visibleTransactions.isEmpty) {
+              return Padding(
+                padding: const EdgeInsets.only(top: 110),
+                child: _EmptyState(
+                  text: _selectedTransactionDate == null
+                    ? 'هنوز تراکنشی ثبت نشده است'
+                    : 'در این روز تراکنشی ثبت نشده است',
+                ),
+              );
+            }
+            final transaction = _visibleTransactions[index - 1];
+            final kind = transaction['kind'] as String;
+            final income = kind == 'income';
+            final transfer = kind == 'transfer';
+            final fee = (transaction['fee'] as num?)?.toInt() ?? 0;
+            final subtitle = transfer
+                ? '${transaction['from_account_name'] ?? 'مبدأ'} ← ${transaction['to_account_name'] ?? 'مقصد'}\\n'
+                    '${_moneyText((transaction['amount'] as num).toInt())} ریال'
+                    '${fee > 0 ? ' • کارمزد: ${_moneyText(fee)} ریال' : ''}'
+                : '${income ? 'دریافت' : 'پرداخت'} • '
+                    '${transaction['parent_name'] ?? transaction['category_name']}\\n'
+                    'حساب: ${transaction['financial_account_name'] ?? 'کیف پول نقدی'}\\n'
+                    '${_moneyText((transaction['amount'] as num).toInt())} ریال'
+                    '${fee > 0 ? ' • کارمزد: ${_moneyText(fee)} ریال' : ''}';
+            return Card(
+              child: ListTile(
+                onTap: transfer
+                    ? () => _newTransfer(existing: transaction)
+                    : () => _newTransaction(existing: transaction),
+                leading: CircleAvatar(
+                  backgroundColor: (transfer ? Colors.orange : income ? Colors.green : Colors.red)
+                      .withValues(alpha: 0.14),
+                  child: Icon(
+                    transfer ? Icons.sync_alt : income ? Icons.south_west : Icons.north_east,
+                    color: transfer ? Colors.orange : income ? Colors.green : Colors.red,
+                  ),
+                ),
+                title: Text(transaction['title'] as String,
+                  style: const TextStyle(fontWeight: FontWeight.w700)),
+                subtitle: Text(subtitle),
+                trailing: PopupMenuButton<String>(
+                  onSelected: (value) async {
+                    if (value == 'edit') {
+                      if (transfer) {
+                        await _newTransfer(existing: transaction);
+                      } else {
+                        await _newTransaction(existing: transaction);
+                      }
+                    } else if (value == 'delete') {
+                      final confirm = await showDialog<bool>(
+                        context: context,
+                        builder: (dialogContext) => AlertDialog(
+                          title: const Text('حذف تراکنش'),
+                          content: Text(
+                            'تراکنش «${transaction['title']}» حذف شود؟ این عملیات قابل بازگشت نیست.'),
+                          actions: [
+                            TextButton(
+                              onPressed: () => Navigator.pop(dialogContext, false),
+                              child: const Text('انصراف')),
+                            FilledButton.tonal(
+                              onPressed: () => Navigator.pop(dialogContext, true),
+                              child: const Text('حذف')),
+                          ],
+                        ),
+                      );
+                      if (confirm == true) {
+                        try {
+                          await DarmaDatabase.instance.deleteTransaction(transaction['id'] as int);
+                          await _refresh();
+                        } catch (error) {
+                          _notice(error.toString());
+                        }
+                      }
+                    }
+                  },
+                  itemBuilder: (_) => const [
+                    PopupMenuItem(value: 'edit', child: Text('ویرایش')),
+                    PopupMenuItem(value: 'delete', child: Text('حذف')),
+                  ],
+                ),
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
               ),
+            );
+          },
+        ),
       );
 
   Widget _simplePage(String title, IconData icon, String message) => Center(
