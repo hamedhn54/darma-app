@@ -6,6 +6,7 @@ import 'package:shamsi_date/shamsi_date.dart';
 import 'data/darma_database.dart';
 import 'presentation/accounts_page.dart';
 import 'presentation/reports_page.dart';
+import 'presentation/people_page.dart';
 import 'presentation/widgets/amount_calculator.dart';
 
 void main() async {
@@ -1429,21 +1430,21 @@ class _DarmaHomeState extends State<DarmaHome> {
           icon: Icons.people_alt_outlined,
           color: const Color(0xFF3DAD91),
           title: 'اشخاص',
-          subtitle: 'طلب‌ها، بدهی‌ها و گردش حساب افراد',
-          count: 'در حال توسعه',
+          subtitle: 'ثبت اشخاص حقیقی و مشاهده مانده و گردش حساب',
+          count: 'فعال',
           children: [
             _moreMenuItem(
                 'فهرست اشخاص',
                 'مدیریت افراد و طرف‌حساب‌ها',
                 Icons.people_outline_rounded,
-                false,
-                () => _comingSoon('فهرست اشخاص')),
+                true,
+                _openPeople),
             _moreMenuItem(
                 'مانده طلب و بدهی',
                 'نمای خالص و جزئیات گردش اشخاص',
                 Icons.compare_arrows_rounded,
-                false,
-                () => _comingSoon('مانده طلب و بدهی')),
+                true,
+                _openPeople),
           ],
         ),
         const SizedBox(height: 20),
@@ -1696,6 +1697,14 @@ class _DarmaHomeState extends State<DarmaHome> {
             ]),
           ),
         ),
+      ),
+    );
+  }
+
+  Future<void> _openPeople() async {
+    await Navigator.of(context).push(
+      MaterialPageRoute<void>(
+        builder: (_) => const PeoplePage(),
       ),
     );
   }
