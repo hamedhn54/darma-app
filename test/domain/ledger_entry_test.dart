@@ -48,8 +48,7 @@ void main() {
     test('rejects empty, single-line, and zero-value documents', () {
       expect(const LedgerDocument([]).isBalanced, isFalse);
       expect(
-        const LedgerDocument([LedgerEntry(accountId: 1, debit: 10)])
-            .isBalanced,
+        const LedgerDocument([LedgerEntry(accountId: 1, debit: 10)]).isBalanced,
         isFalse,
       );
       expect(
@@ -199,5 +198,4 @@ void main() {
       );
     });
   });
-
 }

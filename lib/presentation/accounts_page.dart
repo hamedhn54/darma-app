@@ -56,16 +56,23 @@ class AccountsPage extends StatelessWidget {
                     style: TextStyle(color: Colors.white70, fontSize: 13)),
                 SizedBox(height: 5),
                 Text('مدیریت حساب‌ها و سرفصل‌ها',
-                    style: TextStyle(color: Colors.white, fontSize: 19, fontWeight: FontWeight.w900)),
+                    style: TextStyle(
+                        color: Colors.white,
+                        fontSize: 19,
+                        fontWeight: FontWeight.w900)),
                 SizedBox(height: 8),
-                Text('حساب‌های کل، معین و تفصیلی را از این بخش سازمان‌دهی کنید.',
+                Text(
+                    'حساب‌های کل، معین و تفصیلی را از این بخش سازمان‌دهی کنید.',
                     style: TextStyle(color: Colors.white70, height: 1.6)),
               ],
             ),
           ),
           const SizedBox(height: 24),
           Text('سرفصل‌های اصلی',
-              style: Theme.of(context).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w900)),
+              style: Theme.of(context)
+                  .textTheme
+                  .titleMedium
+                  ?.copyWith(fontWeight: FontWeight.w900)),
           const SizedBox(height: 12),
           for (final entry in _types.entries)
             Padding(
@@ -77,14 +84,17 @@ class AccountsPage extends StatelessWidget {
                   borderRadius: BorderRadius.circular(21),
                   onTap: () => Navigator.of(context).push(
                     MaterialPageRoute(
-                      builder: (_) => AccountGroupPage(type: entry.key, title: entry.value),
+                      builder: (_) =>
+                          AccountGroupPage(type: entry.key, title: entry.value),
                     ),
                   ),
                   child: Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 17, vertical: 16),
+                    padding: const EdgeInsets.symmetric(
+                        horizontal: 17, vertical: 16),
                     decoration: BoxDecoration(
                       borderRadius: BorderRadius.circular(21),
-                      border: Border.all(color: scheme.outline.withValues(alpha: .55)),
+                      border: Border.all(
+                          color: scheme.outline.withValues(alpha: .55)),
                     ),
                     child: Row(
                       children: [
@@ -96,21 +106,30 @@ class AccountsPage extends StatelessWidget {
                             borderRadius: BorderRadius.circular(16),
                           ),
                           alignment: Alignment.center,
-                          child: Icon(_icons[entry.key], color: scheme.primary, size: 24),
+                          child: Icon(_icons[entry.key],
+                              color: scheme.primary, size: 24),
                         ),
                         const SizedBox(width: 14),
                         Expanded(
                           child: Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
-                              Text(entry.value, style: const TextStyle(fontWeight: FontWeight.w900, fontSize: 15)),
+                              Text(entry.value,
+                                  style: const TextStyle(
+                                      fontWeight: FontWeight.w900,
+                                      fontSize: 15)),
                               const SizedBox(height: 4),
                               Text('مدیریت حساب‌های معین و تفصیلی',
-                                  style: Theme.of(context).textTheme.bodySmall?.copyWith(color: scheme.onSurfaceVariant)),
+                                  style: Theme.of(context)
+                                      .textTheme
+                                      .bodySmall
+                                      ?.copyWith(
+                                          color: scheme.onSurfaceVariant)),
                             ],
                           ),
                         ),
-                        Icon(Icons.arrow_back_ios_new_rounded, size: 16, color: scheme.onSurfaceVariant),
+                        Icon(Icons.arrow_back_ios_new_rounded,
+                            size: 16, color: scheme.onSurfaceVariant),
                       ],
                     ),
                   ),
@@ -232,7 +251,9 @@ class _AccountGroupPageState extends State<AccountGroupPage> {
       if (name == null) return;
       try {
         await DarmaDatabase.instance.createAccount(
-          name: name, type: widget.type, parentId: parentId,
+          name: name,
+          type: widget.type,
+          parentId: parentId,
         );
         await _load();
       } catch (error) {
@@ -256,7 +277,7 @@ class _AccountGroupPageState extends State<AccountGroupPage> {
           textDirection: TextDirection.rtl,
           child: Padding(
             padding: EdgeInsets.fromLTRB(
-              20, 8, 20, MediaQuery.of(sheetContext).viewInsets.bottom + 24),
+                20, 8, 20, MediaQuery.of(sheetContext).viewInsets.bottom + 24),
             child: Form(
               key: formKey,
               child: SingleChildScrollView(
@@ -265,46 +286,57 @@ class _AccountGroupPageState extends State<AccountGroupPage> {
                   crossAxisAlignment: CrossAxisAlignment.stretch,
                   children: [
                     const Text('حساب مالی جدید',
-                      style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold)),
+                        style: TextStyle(
+                            fontSize: 20, fontWeight: FontWeight.bold)),
                     const SizedBox(height: 16),
                     DropdownButtonFormField<String>(
                       value: kind,
                       decoration: const InputDecoration(
-                        labelText: 'نوع حساب مالی', border: OutlineInputBorder()),
+                          labelText: 'نوع حساب مالی',
+                          border: OutlineInputBorder()),
                       items: const [
-                        DropdownMenuItem(value: 'bank', child: Text('حساب بانکی')),
-                        DropdownMenuItem(value: 'cash', child: Text('صندوق / وجه نقد')),
-                        DropdownMenuItem(value: 'wallet', child: Text('کیف پول الکترونیکی')),
-                        DropdownMenuItem(value: 'other', child: Text('سایر دارایی نقدی')),
+                        DropdownMenuItem(
+                            value: 'bank', child: Text('حساب بانکی')),
+                        DropdownMenuItem(
+                            value: 'cash', child: Text('صندوق / وجه نقد')),
+                        DropdownMenuItem(
+                            value: 'wallet', child: Text('کیف پول الکترونیکی')),
+                        DropdownMenuItem(
+                            value: 'other', child: Text('سایر دارایی نقدی')),
                       ],
-                      onChanged: (value) => setSheet(() => kind = value ?? 'bank'),
+                      onChanged: (value) =>
+                          setSheet(() => kind = value ?? 'bank'),
                     ),
                     const SizedBox(height: 12),
                     TextFormField(
                       controller: name,
                       decoration: const InputDecoration(
-                        labelText: 'نام حساب (مثلاً حساب ملت اصلی)',
-                        border: OutlineInputBorder()),
-                      validator: (value) => value == null || value.trim().isEmpty
-                          ? 'نام حساب را وارد کنید' : null,
+                          labelText: 'نام حساب (مثلاً حساب ملت اصلی)',
+                          border: OutlineInputBorder()),
+                      validator: (value) =>
+                          value == null || value.trim().isEmpty
+                              ? 'نام حساب را وارد کنید'
+                              : null,
                     ),
                     if (kind == 'bank') ...[
                       const SizedBox(height: 12),
                       TextFormField(
                         controller: bank,
                         decoration: const InputDecoration(
-                          labelText: 'نام بانک', border: OutlineInputBorder()),
+                            labelText: 'نام بانک',
+                            border: OutlineInputBorder()),
                         validator: (value) => kind == 'bank' &&
-                            (value == null || value.trim().isEmpty)
-                            ? 'نام بانک را وارد کنید' : null,
+                                (value == null || value.trim().isEmpty)
+                            ? 'نام بانک را وارد کنید'
+                            : null,
                       ),
                       const SizedBox(height: 12),
                       TextFormField(
                         controller: card,
                         keyboardType: TextInputType.number,
                         decoration: const InputDecoration(
-                          labelText: 'شماره کارت (اختیاری)',
-                          border: OutlineInputBorder()),
+                            labelText: 'شماره کارت (اختیاری)',
+                            border: OutlineInputBorder()),
                       ),
                     ],
                     const SizedBox(height: 12),
@@ -312,13 +344,15 @@ class _AccountGroupPageState extends State<AccountGroupPage> {
                       controller: opening,
                       keyboardType: TextInputType.number,
                       decoration: const InputDecoration(
-                        labelText: 'موجودی اولیه به ریال',
-                        helperText: 'در صورت نداشتن موجودی اولیه، صفر وارد کنید.',
-                        border: OutlineInputBorder()),
+                          labelText: 'موجودی اولیه به ریال',
+                          helperText:
+                              'در صورت نداشتن موجودی اولیه، صفر وارد کنید.',
+                          border: OutlineInputBorder()),
                       validator: (value) {
                         final parsed = _parseInteger(value ?? '');
                         return parsed == null || parsed < 0
-                            ? 'موجودی اولیه معتبر وارد کنید' : null;
+                            ? 'موجودی اولیه معتبر وارد کنید'
+                            : null;
                       },
                     ),
                     const SizedBox(height: 18),
@@ -333,11 +367,14 @@ class _AccountGroupPageState extends State<AccountGroupPage> {
                             parentId: parentId,
                             accountKind: kind,
                             bankName: kind == 'bank' ? bank.text.trim() : null,
-                            cardNumber: kind == 'bank' && card.text.trim().isNotEmpty
-                                ? card.text.trim() : null,
+                            cardNumber:
+                                kind == 'bank' && card.text.trim().isNotEmpty
+                                    ? card.text.trim()
+                                    : null,
                             openingBalance: openingValue,
                           );
-                          if (sheetContext.mounted) Navigator.pop(sheetContext, true);
+                          if (sheetContext.mounted)
+                            Navigator.pop(sheetContext, true);
                         } catch (error) {
                           if (sheetContext.mounted) {
                             ScaffoldMessenger.of(sheetContext).showSnackBar(
@@ -365,8 +402,10 @@ class _AccountGroupPageState extends State<AccountGroupPage> {
 
   Future<void> _editFinancialAccount(Map<String, Object?> account) async {
     final name = TextEditingController(text: account['name'] as String? ?? '');
-    final bank = TextEditingController(text: account['bank_name'] as String? ?? '');
-    final card = TextEditingController(text: account['card_number'] as String? ?? '');
+    final bank =
+        TextEditingController(text: account['bank_name'] as String? ?? '');
+    final card =
+        TextEditingController(text: account['card_number'] as String? ?? '');
     final opening = TextEditingController(
       text: ((account['opening_balance'] as num?)?.toInt() ?? 0).toString(),
     );
@@ -381,7 +420,7 @@ class _AccountGroupPageState extends State<AccountGroupPage> {
           textDirection: TextDirection.rtl,
           child: Padding(
             padding: EdgeInsets.fromLTRB(
-              20, 8, 20, MediaQuery.of(sheetContext).viewInsets.bottom + 24),
+                20, 8, 20, MediaQuery.of(sheetContext).viewInsets.bottom + 24),
             child: Form(
               key: formKey,
               child: SingleChildScrollView(
@@ -390,45 +429,56 @@ class _AccountGroupPageState extends State<AccountGroupPage> {
                   crossAxisAlignment: CrossAxisAlignment.stretch,
                   children: [
                     const Text('ویرایش حساب مالی',
-                      style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold)),
+                        style: TextStyle(
+                            fontSize: 20, fontWeight: FontWeight.bold)),
                     const SizedBox(height: 16),
                     DropdownButtonFormField<String>(
                       value: kind,
                       decoration: const InputDecoration(
-                        labelText: 'نوع حساب مالی', border: OutlineInputBorder()),
+                          labelText: 'نوع حساب مالی',
+                          border: OutlineInputBorder()),
                       items: const [
-                        DropdownMenuItem(value: 'bank', child: Text('حساب بانکی')),
-                        DropdownMenuItem(value: 'cash', child: Text('صندوق / وجه نقد')),
-                        DropdownMenuItem(value: 'wallet', child: Text('کیف پول الکترونیکی')),
-                        DropdownMenuItem(value: 'other', child: Text('سایر دارایی نقدی')),
+                        DropdownMenuItem(
+                            value: 'bank', child: Text('حساب بانکی')),
+                        DropdownMenuItem(
+                            value: 'cash', child: Text('صندوق / وجه نقد')),
+                        DropdownMenuItem(
+                            value: 'wallet', child: Text('کیف پول الکترونیکی')),
+                        DropdownMenuItem(
+                            value: 'other', child: Text('سایر دارایی نقدی')),
                       ],
-                      onChanged: (value) => setSheet(() => kind = value ?? 'bank'),
+                      onChanged: (value) =>
+                          setSheet(() => kind = value ?? 'bank'),
                     ),
                     const SizedBox(height: 12),
                     TextFormField(
                       controller: name,
                       decoration: const InputDecoration(
-                        labelText: 'نام حساب', border: OutlineInputBorder()),
-                      validator: (value) => value == null || value.trim().isEmpty
-                          ? 'نام حساب را وارد کنید' : null,
+                          labelText: 'نام حساب', border: OutlineInputBorder()),
+                      validator: (value) =>
+                          value == null || value.trim().isEmpty
+                              ? 'نام حساب را وارد کنید'
+                              : null,
                     ),
                     if (kind == 'bank') ...[
                       const SizedBox(height: 12),
                       TextFormField(
                         controller: bank,
                         decoration: const InputDecoration(
-                          labelText: 'نام بانک', border: OutlineInputBorder()),
+                            labelText: 'نام بانک',
+                            border: OutlineInputBorder()),
                         validator: (value) => kind == 'bank' &&
-                            (value == null || value.trim().isEmpty)
-                            ? 'نام بانک را وارد کنید' : null,
+                                (value == null || value.trim().isEmpty)
+                            ? 'نام بانک را وارد کنید'
+                            : null,
                       ),
                       const SizedBox(height: 12),
                       TextFormField(
                         controller: card,
                         keyboardType: TextInputType.number,
                         decoration: const InputDecoration(
-                          labelText: 'شماره کارت (اختیاری)',
-                          border: OutlineInputBorder()),
+                            labelText: 'شماره کارت (اختیاری)',
+                            border: OutlineInputBorder()),
                       ),
                     ],
                     const SizedBox(height: 12),
@@ -436,13 +486,15 @@ class _AccountGroupPageState extends State<AccountGroupPage> {
                       controller: opening,
                       keyboardType: TextInputType.number,
                       decoration: const InputDecoration(
-                        labelText: 'موجودی اولیه به ریال',
-                        helperText: 'پس از ثبت گردش مالی، موجودی اولیه قابل تغییر نیست؛ برای اصلاح آن باید سند اصلاحی ثبت شود.',
-                        border: OutlineInputBorder()),
+                          labelText: 'موجودی اولیه به ریال',
+                          helperText:
+                              'پس از ثبت گردش مالی، موجودی اولیه قابل تغییر نیست؛ برای اصلاح آن باید سند اصلاحی ثبت شود.',
+                          border: OutlineInputBorder()),
                       validator: (value) {
                         final parsed = _parseInteger(value ?? '');
                         return parsed == null || parsed < 0
-                            ? 'موجودی اولیه معتبر وارد کنید' : null;
+                            ? 'موجودی اولیه معتبر وارد کنید'
+                            : null;
                       },
                     ),
                     const SizedBox(height: 18),
@@ -455,11 +507,14 @@ class _AccountGroupPageState extends State<AccountGroupPage> {
                             name: name.text.trim(),
                             accountKind: kind,
                             bankName: kind == 'bank' ? bank.text.trim() : null,
-                            cardNumber: kind == 'bank' && card.text.trim().isNotEmpty
-                                ? card.text.trim() : null,
+                            cardNumber:
+                                kind == 'bank' && card.text.trim().isNotEmpty
+                                    ? card.text.trim()
+                                    : null,
                             openingBalance: _parseInteger(opening.text)!,
                           );
-                          if (sheetContext.mounted) Navigator.pop(sheetContext, true);
+                          if (sheetContext.mounted)
+                            Navigator.pop(sheetContext, true);
                         } catch (error) {
                           if (sheetContext.mounted) {
                             ScaffoldMessenger.of(sheetContext).showSnackBar(
@@ -540,7 +595,8 @@ class _AccountGroupPageState extends State<AccountGroupPage> {
     if (kind == 'cash') parts.add('صندوق');
     if (kind == 'wallet') parts.add('کیف پول');
     if (card != null && card.isNotEmpty) {
-      parts.add('کارت **** ${card.length > 4 ? card.substring(card.length - 4) : card}');
+      parts.add(
+          'کارت **** ${card.length > 4 ? card.substring(card.length - 4) : card}');
     }
     parts.add('مانده: ${balance.toString()} ریال');
     return Text(parts.join(' • '));
@@ -610,23 +666,33 @@ class _AccountGroupPageState extends State<AccountGroupPage> {
                   Container(
                     padding: const EdgeInsets.all(18),
                     decoration: BoxDecoration(
-                      color: Theme.of(context).colorScheme.primary.withValues(alpha: .08),
+                      color: Theme.of(context)
+                          .colorScheme
+                          .primary
+                          .withValues(alpha: .08),
                       borderRadius: BorderRadius.circular(20),
                       border: Border.all(
-                        color: Theme.of(context).colorScheme.primary.withValues(alpha: .16),
+                        color: Theme.of(context)
+                            .colorScheme
+                            .primary
+                            .withValues(alpha: .16),
                       ),
                     ),
                     child: Row(
                       children: [
                         Icon(Icons.account_tree_rounded,
-                            color: Theme.of(context).colorScheme.primary, size: 25),
+                            color: Theme.of(context).colorScheme.primary,
+                            size: 25),
                         const SizedBox(width: 12),
                         Expanded(
                           child: Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
                               Text('حساب‌های معین',
-                                  style: Theme.of(context).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w900)),
+                                  style: Theme.of(context)
+                                      .textTheme
+                                      .titleMedium
+                                      ?.copyWith(fontWeight: FontWeight.w900)),
                               const SizedBox(height: 3),
                               Text('${mains.length} سرفصل معین تعریف‌شده',
                                   style: Theme.of(context).textTheme.bodySmall),

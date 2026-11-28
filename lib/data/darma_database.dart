@@ -55,7 +55,8 @@ class DarmaDatabase {
           await db.execute('ALTER TABLE accounts ADD COLUMN account_kind TEXT');
           await db.execute('ALTER TABLE accounts ADD COLUMN bank_name TEXT');
           await db.execute('ALTER TABLE accounts ADD COLUMN card_number TEXT');
-          await db.execute('ALTER TABLE accounts ADD COLUMN opening_balance INTEGER NOT NULL DEFAULT 0');
+          await db.execute(
+              'ALTER TABLE accounts ADD COLUMN opening_balance INTEGER NOT NULL DEFAULT 0');
         }
         if (oldVersion < 6) {
           final expenseRootId = Sqflite.firstIntValue(await db.rawQuery(
@@ -63,9 +64,10 @@ class DarmaDatabase {
           ));
           if (expenseRootId != null) {
             final feeCount = Sqflite.firstIntValue(await db.rawQuery(
-              "SELECT COUNT(*) FROM accounts WHERE type = 'expense' AND name = 'کارمزد بانکی' AND parent_id = ?",
-              [expenseRootId],
-            )) ?? 0;
+                  "SELECT COUNT(*) FROM accounts WHERE type = 'expense' AND name = 'کارمزد بانکی' AND parent_id = ?",
+                  [expenseRootId],
+                )) ??
+                0;
             if (feeCount == 0) {
               await db.insert('accounts', {
                 'name': 'کارمزد بانکی',
@@ -190,7 +192,8 @@ class DarmaDatabase {
           'name': name,
           'type': group.key,
           'parent_id': rootId,
-          'is_system': (name == 'کیف پول نقدی' || name == 'کارمزد بانکی') ? 1 : 0,
+          'is_system':
+              (name == 'کیف پول نقدی' || name == 'کارمزد بانکی') ? 1 : 0,
           'created_at': now,
         });
       }
@@ -229,19 +232,21 @@ class DarmaDatabase {
       whereArgs: [transactionId],
     );
     final document = LedgerDocument(
-      rows.map((row) => LedgerEntry(
-        accountId: row['account_id'] as int,
-        debit: row['debit'] as int,
-        credit: row['credit'] as int,
-      )).toList(growable: false),
+      rows
+          .map((row) => LedgerEntry(
+                accountId: row['account_id'] as int,
+                debit: row['debit'] as int,
+                credit: row['credit'] as int,
+              ))
+          .toList(growable: false),
     );
     if (!document.isBalanced) {
       throw StateError('سند حسابداری معتبر و تراز نیست');
     }
   }
 
-  Future<void> _insertJournalEntries(
-      DatabaseExecutor txn, int transactionId, List<LedgerEntry> entries) async {
+  Future<void> _insertJournalEntries(DatabaseExecutor txn, int transactionId,
+      List<LedgerEntry> entries) async {
     for (final entry in entries) {
       await txn.insert('journal_entries', {
         'transaction_id': transactionId,
@@ -382,8 +387,17 @@ class DarmaDatabase {
 
       await txn.update(
         'journal_transactions',
-        {'title': title.trim(), 'amount': amount, 'fee': fee, 'kind': kind,
-          'created_at': (transactionDate ?? DateTime.tryParse(rows.first['created_at'] as String? ?? '') ?? DateTime.now()).toIso8601String()},
+        {
+          'title': title.trim(),
+          'amount': amount,
+          'fee': fee,
+          'kind': kind,
+          'created_at': (transactionDate ??
+                  DateTime.tryParse(
+                      rows.first['created_at'] as String? ?? '') ??
+                  DateTime.now())
+              .toIso8601String()
+        },
         where: 'id = ?',
         whereArgs: [transactionId],
       );
@@ -476,8 +490,16 @@ class DarmaDatabase {
 
       await txn.update(
         'journal_transactions',
-        {'title': title.trim(), 'amount': amount, 'fee': fee,
-          'created_at': (transactionDate ?? DateTime.tryParse(rows.first['created_at'] as String? ?? '') ?? DateTime.now()).toIso8601String()},
+        {
+          'title': title.trim(),
+          'amount': amount,
+          'fee': fee,
+          'created_at': (transactionDate ??
+                  DateTime.tryParse(
+                      rows.first['created_at'] as String? ?? '') ??
+                  DateTime.now())
+              .toIso8601String()
+        },
         where: 'id = ?',
         whereArgs: [transactionId],
       );
@@ -561,7 +583,8 @@ class DarmaDatabase {
   }) async {
     final cleanName = name.trim();
     if (cleanName.isEmpty) throw ArgumentError('نام حساب الزامی است');
-    if (openingBalance < 0) throw ArgumentError('موجودی اولیه نمی‌تواند منفی باشد');
+    if (openingBalance < 0)
+      throw ArgumentError('موجودی اولیه نمی‌تواند منفی باشد');
     if (accountKind != null &&
         !const ['bank', 'cash', 'wallet', 'other'].contains(accountKind)) {
       throw ArgumentError('نوع حساب مالی نامعتبر است');
@@ -573,7 +596,10 @@ class DarmaDatabase {
       throw ArgumentError('اطلاعات بانک فقط برای حساب بانکی مجاز است');
     }
     if (type != 'asset' &&
-        (accountKind != null || openingBalance != 0 || bankName != null || cardNumber != null)) {
+        (accountKind != null ||
+            openingBalance != 0 ||
+            bankName != null ||
+            cardNumber != null)) {
       throw ArgumentError('اطلاعات حساب مالی فقط برای دارایی‌ها مجاز است');
     }
     if (!const ['asset', 'liability', 'income', 'expense'].contains(type)) {
@@ -599,7 +625,10 @@ class DarmaDatabase {
           throw StateError('امکان ایجاد تفصیلی زیر سرفصل اصلی وجود ندارد');
         }
         final grandparent = await txn.query(
-          'accounts', where: 'id = ?', whereArgs: [parents.first['parent_id']], limit: 1,
+          'accounts',
+          where: 'id = ?',
+          whereArgs: [parents.first['parent_id']],
+          limit: 1,
         );
         if (grandparent.isEmpty || grandparent.first['parent_id'] != null) {
           throw StateError('ساختار حساب فقط تا سطح معین و تفصیلی مجاز است');
@@ -610,7 +639,8 @@ class DarmaDatabase {
             [parentId],
           ));
           if ((used ?? 0) > 0) {
-            throw StateError('این حساب گردش مالی دارد و نمی‌توان آن را به حساب مادر تبدیل کرد');
+            throw StateError(
+                'این حساب گردش مالی دارد و نمی‌توان آن را به حساب مادر تبدیل کرد');
           }
         }
         targetParent = parentId;
@@ -628,7 +658,8 @@ class DarmaDatabase {
         'is_system': 0,
         'account_kind': accountKind,
         'bank_name': bankName?.trim().isEmpty == true ? null : bankName?.trim(),
-        'card_number': cardNumber?.trim().isEmpty == true ? null : cardNumber?.trim(),
+        'card_number':
+            cardNumber?.trim().isEmpty == true ? null : cardNumber?.trim(),
         'opening_balance': openingBalance,
         'created_at': DateTime.now().toIso8601String(),
       });
@@ -651,7 +682,8 @@ class DarmaDatabase {
     if (!const ['bank', 'cash', 'wallet', 'other'].contains(accountKind)) {
       throw ArgumentError('نوع حساب مالی نامعتبر است');
     }
-    if (accountKind == 'bank' && (bankName == null || bankName.trim().isEmpty)) {
+    if (accountKind == 'bank' &&
+        (bankName == null || bankName.trim().isEmpty)) {
       throw ArgumentError('نام بانک را وارد کنید');
     }
     final db = await database;
@@ -669,11 +701,15 @@ class DarmaDatabase {
         throw StateError('این حساب مالی قابل ویرایش نیست');
       }
       final entryCount = Sqflite.firstIntValue(await txn.rawQuery(
-        'SELECT COUNT(*) FROM journal_entries WHERE account_id = ?', [id],
-      )) ?? 0;
-      final oldOpeningBalance = (rows.first['opening_balance'] as num?)?.toInt() ?? 0;
+            'SELECT COUNT(*) FROM journal_entries WHERE account_id = ?',
+            [id],
+          )) ??
+          0;
+      final oldOpeningBalance =
+          (rows.first['opening_balance'] as num?)?.toInt() ?? 0;
       if (entryCount > 0 && openingBalance != oldOpeningBalance) {
-        throw StateError('این حساب گردش مالی دارد؛ اصلاح موجودی اولیه باید با سند اصلاحی انجام شود');
+        throw StateError(
+            'این حساب گردش مالی دارد؛ اصلاح موجودی اولیه باید با سند اصلاحی انجام شود');
       }
       final duplicate = Sqflite.firstIntValue(await txn.rawQuery(
         'SELECT COUNT(*) FROM accounts WHERE name = ? AND type = ? AND parent_id = ? AND id != ?',
@@ -688,10 +724,10 @@ class DarmaDatabase {
           'name': cleanName,
           'account_kind': accountKind,
           'bank_name': accountKind == 'bank' ? bankName!.trim() : null,
-          'card_number': accountKind == 'bank' &&
-                  cardNumber?.trim().isNotEmpty == true
-              ? cardNumber!.trim()
-              : null,
+          'card_number':
+              accountKind == 'bank' && cardNumber?.trim().isNotEmpty == true
+                  ? cardNumber!.trim()
+                  : null,
           'opening_balance': openingBalance,
         },
         where: 'id = ?',
@@ -735,8 +771,8 @@ class DarmaDatabase {
     final db = await database;
     final start = DateTime(startDate.year, startDate.month, startDate.day)
         .toIso8601String();
-    final end = DateTime(endDate.year, endDate.month, endDate.day)
-        .toIso8601String();
+    final end =
+        DateTime(endDate.year, endDate.month, endDate.day).toIso8601String();
 
     final summaryRows = await db.rawQuery('''
       SELECT
@@ -753,8 +789,13 @@ class DarmaDatabase {
         AND (? = 'all' OR t.kind = ?)
         AND (? IS NULL OR a.id = ? OR a.parent_id = ?)
     ''', [
-      start, end, filterType, filterType,
-      selectedAccountId, selectedAccountId, selectedAccountId,
+      start,
+      end,
+      filterType,
+      filterType,
+      selectedAccountId,
+      selectedAccountId,
+      selectedAccountId,
     ]);
     final summary = summaryRows.first;
 
@@ -786,9 +827,17 @@ class DarmaDatabase {
       HAVING amount != 0
       ORDER BY amount DESC
     ''', [
-      level, level, level, level,
-      start, end, filterType, filterType,
-      selectedAccountId, selectedAccountId, selectedAccountId,
+      level,
+      level,
+      level,
+      level,
+      start,
+      end,
+      filterType,
+      filterType,
+      selectedAccountId,
+      selectedAccountId,
+      selectedAccountId,
     ]);
 
     final trend = await db.rawQuery('''
@@ -807,8 +856,13 @@ class DarmaDatabase {
       GROUP BY month_key
       ORDER BY month_key
     ''', [
-      start, end, filterType, filterType,
-      selectedAccountId, selectedAccountId, selectedAccountId,
+      start,
+      end,
+      filterType,
+      filterType,
+      selectedAccountId,
+      selectedAccountId,
+      selectedAccountId,
     ]);
 
     return {

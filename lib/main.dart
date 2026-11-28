@@ -110,15 +110,19 @@ class _DarmaAppState extends State<DarmaApp> {
         ),
         inputDecorationTheme: InputDecorationTheme(
           filled: true,
-          fillColor: dark ? Colors.white.withValues(alpha: .035) : const Color(0xFFF7F8FA),
-          contentPadding: const EdgeInsets.symmetric(horizontal: 15, vertical: 14),
+          fillColor: dark
+              ? Colors.white.withValues(alpha: .035)
+              : const Color(0xFFF7F8FA),
+          contentPadding:
+              const EdgeInsets.symmetric(horizontal: 15, vertical: 14),
           border: OutlineInputBorder(
             borderRadius: BorderRadius.circular(15),
             borderSide: BorderSide(color: scheme.outline),
           ),
           enabledBorder: OutlineInputBorder(
             borderRadius: BorderRadius.circular(15),
-            borderSide: BorderSide(color: scheme.outline.withValues(alpha: .65)),
+            borderSide:
+                BorderSide(color: scheme.outline.withValues(alpha: .65)),
           ),
           focusedBorder: OutlineInputBorder(
             borderRadius: BorderRadius.circular(15),
@@ -129,17 +133,21 @@ class _DarmaAppState extends State<DarmaApp> {
           backgroundColor: cardSurface,
           indicatorColor: accent.withValues(alpha: .18),
           labelTextStyle: WidgetStateProperty.resolveWith((states) => TextStyle(
-            fontSize: 11,
-            fontWeight: states.contains(WidgetState.selected) ? FontWeight.w800 : FontWeight.w500,
-          )),
+                fontSize: 11,
+                fontWeight: states.contains(WidgetState.selected)
+                    ? FontWeight.w800
+                    : FontWeight.w500,
+              )),
         ),
         floatingActionButtonTheme: FloatingActionButtonThemeData(
           backgroundColor: accent,
           foregroundColor: dark ? const Color(0xFF111827) : Colors.white,
           elevation: 5,
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(18)),
+          shape:
+              RoundedRectangleBorder(borderRadius: BorderRadius.circular(18)),
         ),
-        dividerTheme: DividerThemeData(color: scheme.outline.withValues(alpha: .55)),
+        dividerTheme:
+            DividerThemeData(color: scheme.outline.withValues(alpha: .55)),
       ),
       home: DarmaHome(
         themeName: _theme,
@@ -243,8 +251,10 @@ class _DarmaHomeState extends State<DarmaHome> {
       final raw = transaction['created_at'] as String?;
       if (raw == null) return false;
       final date = DateTime.tryParse(raw)?.toLocal();
-      return date != null && date.year == selected.year &&
-          date.month == selected.month && date.day == selected.day;
+      return date != null &&
+          date.year == selected.year &&
+          date.month == selected.month &&
+          date.day == selected.day;
     }).toList();
   }
 
@@ -262,17 +272,30 @@ class _DarmaHomeState extends State<DarmaHome> {
   Future<void> _pickTransactionDate() async {
     final now = Jalali.now();
     final initial = _selectedTransactionDate == null
-        ? now : Jalali.fromDateTime(_selectedTransactionDate!);
+        ? now
+        : Jalali.fromDateTime(_selectedTransactionDate!);
     final picked = await showModalBottomSheet<DateTime>(
-      context: context, isScrollControlled: true, showDragHandle: true,
+      context: context,
+      isScrollControlled: true,
+      showDragHandle: true,
       builder: (sheetContext) {
         var month = initial.month;
         var year = initial.year;
         return StatefulBuilder(
           builder: (sheetContext, setSheet) {
             const monthNames = [
-              'فروردین', 'اردیبهشت', 'خرداد', 'تیر', 'مرداد', 'شهریور',
-              'مهر', 'آبان', 'آذر', 'دی', 'بهمن', 'اسفند'
+              'فروردین',
+              'اردیبهشت',
+              'خرداد',
+              'تیر',
+              'مرداد',
+              'شهریور',
+              'مهر',
+              'آبان',
+              'آذر',
+              'دی',
+              'بهمن',
+              'اسفند'
             ];
             final firstDay = Jalali(year, month, 1).toDateTime();
             final leading = (firstDay.weekday + 1) % 7;
@@ -281,7 +304,9 @@ class _DarmaHomeState extends State<DarmaHome> {
               ...List<int?>.filled(leading, null),
               ...List<int>.generate(monthLength, (i) => i + 1),
             ];
-            while (cells.length % 7 != 0) { cells.add(null); }
+            while (cells.length % 7 != 0) {
+              cells.add(null);
+            }
             return Directionality(
               textDirection: ui.TextDirection.rtl,
               child: SafeArea(
@@ -294,62 +319,91 @@ class _DarmaHomeState extends State<DarmaHome> {
                         mainAxisAlignment: MainAxisAlignment.spaceBetween,
                         children: [
                           IconButton(
-                            onPressed: () => setSheet(() {
-                              if (month == 1) { month = 12; year--; } else { month--; }
-                            }),
-                            icon: const Icon(Icons.chevron_right)),
-                          Text('${monthNames[month - 1]} ${_digits(year.toString())}',
-                            style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 17)),
+                              onPressed: () => setSheet(() {
+                                    if (month == 1) {
+                                      month = 12;
+                                      year--;
+                                    } else {
+                                      month--;
+                                    }
+                                  }),
+                              icon: const Icon(Icons.chevron_right)),
+                          Text(
+                              '${monthNames[month - 1]} ${_digits(year.toString())}',
+                              style: const TextStyle(
+                                  fontWeight: FontWeight.bold, fontSize: 17)),
                           IconButton(
-                            onPressed: () => setSheet(() {
-                              if (month == 12) { month = 1; year++; } else { month++; }
-                            }),
-                            icon: const Icon(Icons.chevron_left)),
+                              onPressed: () => setSheet(() {
+                                    if (month == 12) {
+                                      month = 1;
+                                      year++;
+                                    } else {
+                                      month++;
+                                    }
+                                  }),
+                              icon: const Icon(Icons.chevron_left)),
                         ],
                       ),
                       const SizedBox(height: 8),
                       Row(
                         children: ['ش', 'ی', 'د', 'س', 'چ', 'پ', 'ج']
-                          .map((day) => Expanded(child: Center(
-                            child: Text(day, style: const TextStyle(fontWeight: FontWeight.bold)))))
-                          .toList(),
+                            .map((day) => Expanded(
+                                child: Center(
+                                    child: Text(day,
+                                        style: const TextStyle(
+                                            fontWeight: FontWeight.bold)))))
+                            .toList(),
                       ),
                       const SizedBox(height: 8),
                       GridView.builder(
                         shrinkWrap: true,
                         physics: const NeverScrollableScrollPhysics(),
                         itemCount: cells.length,
-                        gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-                          crossAxisCount: 7, mainAxisSpacing: 5, crossAxisSpacing: 5),
+                        gridDelegate:
+                            const SliverGridDelegateWithFixedCrossAxisCount(
+                                crossAxisCount: 7,
+                                mainAxisSpacing: 5,
+                                crossAxisSpacing: 5),
                         itemBuilder: (context, index) {
                           final day = cells[index];
                           if (day == null) return const SizedBox.shrink();
                           final selectedDate = _selectedTransactionDate == null
-                              ? null : Jalali.fromDateTime(_selectedTransactionDate!);
+                              ? null
+                              : Jalali.fromDateTime(_selectedTransactionDate!);
                           final selected = selectedDate != null &&
-                              selectedDate.year == year && selectedDate.month == month &&
+                              selectedDate.year == year &&
+                              selectedDate.month == month &&
                               selectedDate.day == day;
                           return InkWell(
                             borderRadius: BorderRadius.circular(24),
                             onTap: () => Navigator.pop(sheetContext,
-                              Jalali(year, month, day).toDateTime()),
+                                Jalali(year, month, day).toDateTime()),
                             child: Container(
                               decoration: BoxDecoration(
-                                color: selected ? Theme.of(context).colorScheme.primary : null,
-                                shape: BoxShape.circle),
+                                  color: selected
+                                      ? Theme.of(context).colorScheme.primary
+                                      : null,
+                                  shape: BoxShape.circle),
                               alignment: Alignment.center,
                               child: Text(_digits(day.toString()),
-                                style: TextStyle(
-                                  fontWeight: selected ? FontWeight.bold : FontWeight.normal,
-                                  color: selected ? Theme.of(context).colorScheme.onPrimary : null)),
+                                  style: TextStyle(
+                                      fontWeight: selected
+                                          ? FontWeight.bold
+                                          : FontWeight.normal,
+                                      color: selected
+                                          ? Theme.of(context)
+                                              .colorScheme
+                                              .onPrimary
+                                          : null)),
                             ),
                           );
                         },
                       ),
                       const SizedBox(height: 12),
                       TextButton(
-                        onPressed: () => Navigator.pop(sheetContext, DateTime(1900, 1, 1)),
-                        child: const Text('پاک کردن فیلتر تاریخ')),
+                          onPressed: () =>
+                              Navigator.pop(sheetContext, DateTime(1900, 1, 1)),
+                          child: const Text('پاک کردن فیلتر تاریخ')),
                     ],
                   ),
                 ),
@@ -360,8 +414,9 @@ class _DarmaHomeState extends State<DarmaHome> {
       },
     );
     if (picked != null && mounted) {
-      setState(() => _selectedTransactionDate =
-          picked.year == 1900 ? null : DateTime(picked.year, picked.month, picked.day));
+      setState(() => _selectedTransactionDate = picked.year == 1900
+          ? null
+          : DateTime(picked.year, picked.month, picked.day));
     }
   }
 
@@ -396,34 +451,49 @@ class _DarmaHomeState extends State<DarmaHome> {
                 height: 38,
                 decoration: BoxDecoration(
                   gradient: LinearGradient(
-                    colors: [Theme.of(context).colorScheme.primary, Theme.of(context).colorScheme.secondary],
+                    colors: [
+                      Theme.of(context).colorScheme.primary,
+                      Theme.of(context).colorScheme.secondary
+                    ],
                     begin: Alignment.topRight,
                     end: Alignment.bottomLeft,
                   ),
                   borderRadius: BorderRadius.circular(12),
                   boxShadow: [
                     BoxShadow(
-                      color: Theme.of(context).colorScheme.primary.withValues(alpha: .22),
+                      color: Theme.of(context)
+                          .colorScheme
+                          .primary
+                          .withValues(alpha: .22),
                       blurRadius: 12,
                       offset: const Offset(0, 4),
                     ),
                   ],
                 ),
                 alignment: Alignment.center,
-                child: Text('D', style: TextStyle(
-                  color: Theme.of(context).brightness == Brightness.dark ? const Color(0xFF101827) : Colors.white,
-                  fontSize: 23,
-                  fontWeight: FontWeight.w900,
-                  height: 1,
-                )),
+                child: Text('D',
+                    style: TextStyle(
+                      color: Theme.of(context).brightness == Brightness.dark
+                          ? const Color(0xFF101827)
+                          : Colors.white,
+                      fontSize: 23,
+                      fontWeight: FontWeight.w900,
+                      height: 1,
+                    )),
               ),
               const SizedBox(width: 11),
               const Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 mainAxisSize: MainAxisSize.min,
                 children: [
-                  Text('دارما', style: TextStyle(fontWeight: FontWeight.w900, height: 1.1)),
-                  Text('مدیریت هوشمند مالی', style: TextStyle(fontSize: 10, fontWeight: FontWeight.w500, color: Colors.grey)),
+                  Text('دارما',
+                      style:
+                          TextStyle(fontWeight: FontWeight.w900, height: 1.1)),
+                  Text('مدیریت هوشمند مالی',
+                      style: TextStyle(
+                          fontSize: 10,
+                          fontWeight: FontWeight.w500,
+                          color: Colors.grey)),
                 ],
               ),
             ],
@@ -435,7 +505,12 @@ class _DarmaHomeState extends State<DarmaHome> {
             const SizedBox(width: 8),
           ],
         ),
-        body: SafeArea(child: _DarmaAnimatedIndexedStack(index: _tab, children: pages)),
+        body: SafeArea(
+          child: KeyedSubtree(
+            key: ValueKey<int>(_tab),
+            child: pages[_tab],
+          ),
+        ),
         floatingActionButton: _tab == 0 || _tab == 1
             ? FloatingActionButton.extended(
                 onPressed: () => _newTransaction(),
@@ -443,96 +518,43 @@ class _DarmaHomeState extends State<DarmaHome> {
                 label: const Text('ثبت تراکنش'),
               )
             : null,
-        bottomNavigationBar: SafeArea(
-          top: false,
-          child: Padding(
-            padding: const EdgeInsets.only(left: 16, right: 16, top: 8, bottom: 8),
-            child: Center(
-              child: Container(
-                width: 264,
-                height: 60,
-                padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 8),
-                decoration: BoxDecoration(
-                  color: Theme.of(context).brightness == Brightness.dark
-                      ? const Color(0xE6102929)
-                      : Theme.of(context).colorScheme.surface.withValues(alpha: .97),
-                  borderRadius: BorderRadius.circular(36),
-                  border: Border.all(
-                    color: Theme.of(context).colorScheme.outline.withValues(alpha: .28),
-                  ),
-                  boxShadow: [
-                    BoxShadow(
-                      color: Colors.black.withValues(
-                        alpha: Theme.of(context).brightness == Brightness.dark ? .28 : .10,
-                      ),
-                      blurRadius: 24,
-                      offset: const Offset(0, 8),
-                    ),
-                  ],
-                ),
-                child: Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-                  children: [
-                    _buildNavItem(0, Icons.home_outlined, Icons.home_rounded),
-                    _buildNavItem(1, Icons.receipt_long_outlined, Icons.receipt_long_rounded),
-                    _buildNavItem(2, Icons.query_stats_outlined, Icons.query_stats_rounded),
-                    _buildNavItem(3, Icons.grid_view_outlined, Icons.grid_view_rounded),
-                  ],
-                ),
-              ),
+        bottomNavigationBar: NavigationBar(
+          height: 72,
+          elevation: 0,
+          backgroundColor: Theme.of(context).brightness == Brightness.dark
+              ? const Color(0xFF101D2B)
+              : Theme.of(context).colorScheme.surface,
+          indicatorColor:
+              Theme.of(context).colorScheme.primary.withValues(alpha: .18),
+          labelBehavior: NavigationDestinationLabelBehavior.alwaysHide,
+          selectedIndex: _tab,
+          onDestinationSelected: (index) => setState(() => _tab = index),
+          destinations: const [
+            NavigationDestination(
+              icon: Icon(Icons.home_outlined),
+              selectedIcon: Icon(Icons.home_rounded),
+              label: 'خانه',
             ),
-          ),
+            NavigationDestination(
+              icon: Icon(Icons.receipt_long_outlined),
+              selectedIcon: Icon(Icons.receipt_long_rounded),
+              label: 'تراکنش‌ها',
+            ),
+            NavigationDestination(
+              icon: Icon(Icons.query_stats_outlined),
+              selectedIcon: Icon(Icons.query_stats_rounded),
+              label: 'گزارش‌ها',
+            ),
+            NavigationDestination(
+              icon: Icon(Icons.grid_view_outlined),
+              selectedIcon: Icon(Icons.grid_view_rounded),
+              label: 'بیشتر',
+            ),
+          ],
         ),
       ),
     );
   }
-
-  Widget _buildNavItem(int index, IconData icon, IconData selectedIcon) {
-    final selected = _tab == index;
-    const accent = Color(0xFF20D8BE);
-
-    return Expanded(
-      child: Center(
-        child: Material(
-          color: Colors.transparent,
-          child: InkWell(
-            onTap: () => setState(() => _tab = index),
-            customBorder: const CircleBorder(),
-            child: AnimatedContainer(
-              duration: const Duration(milliseconds: 220),
-              curve: Curves.easeOutCubic,
-              width: 43,
-              height: 43,
-              decoration: BoxDecoration(
-                shape: BoxShape.circle,
-                color: selected ? accent.withValues(alpha: .19) : Colors.transparent,
-                border: selected
-                    ? Border.all(color: accent.withValues(alpha: .48), width: 1)
-                    : null,
-                boxShadow: selected
-                    ? [
-                        BoxShadow(
-                          color: accent.withValues(alpha: .32),
-                          blurRadius: 16,
-                          spreadRadius: 1,
-                        ),
-                      ]
-                    : const [],
-              ),
-              child: Icon(
-                selected ? selectedIcon : icon,
-                size: 22,
-                color: selected
-                    ? accent
-                    : Theme.of(context).colorScheme.onSurface.withValues(alpha: .76),
-              ),
-            ),
-          ),
-        ),
-      ),
-    );
-  }
-
 
   Widget _dashboard() {
     final now = DateTime.now();
@@ -548,18 +570,33 @@ class _DarmaHomeState extends State<DarmaHome> {
     });
     final monthlyIncome = monthTransactions
         .where((transaction) => transaction['kind'] == 'income')
-        .fold<int>(0, (sum, transaction) =>
-            sum + ((transaction['amount'] as num?)?.toInt() ?? 0));
+        .fold<int>(
+            0,
+            (sum, transaction) =>
+                sum + ((transaction['amount'] as num?)?.toInt() ?? 0));
     final monthlyExpense = monthTransactions
         .where((transaction) => transaction['kind'] == 'expense')
-        .fold<int>(0, (sum, transaction) =>
-            sum + ((transaction['amount'] as num?)?.toInt() ?? 0) +
+        .fold<int>(
+            0,
+            (sum, transaction) =>
+                sum +
+                ((transaction['amount'] as num?)?.toInt() ?? 0) +
                 ((transaction['fee'] as num?)?.toInt() ?? 0));
     final accent = Theme.of(context).colorScheme.primary;
     final dark = Theme.of(context).brightness == Brightness.dark;
     final monthNames = const [
-      'فروردین', 'اردیبهشت', 'خرداد', 'تیر', 'مرداد', 'شهریور',
-      'مهر', 'آبان', 'آذر', 'دی', 'بهمن', 'اسفند'
+      'فروردین',
+      'اردیبهشت',
+      'خرداد',
+      'تیر',
+      'مرداد',
+      'شهریور',
+      'مهر',
+      'آبان',
+      'آذر',
+      'دی',
+      'بهمن',
+      'اسفند'
     ];
 
     return RefreshIndicator(
@@ -577,10 +614,11 @@ class _DarmaHomeState extends State<DarmaHome> {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text('داشبورد مالی',
-                      style: Theme.of(context).textTheme.headlineSmall?.copyWith(
-                        fontWeight: FontWeight.w900,
-                        letterSpacing: -.4,
-                      )),
+                        style:
+                            Theme.of(context).textTheme.headlineSmall?.copyWith(
+                                  fontWeight: FontWeight.w900,
+                                  letterSpacing: -.4,
+                                )),
                     const SizedBox(height: 4),
                     Text(
                       '${monthNames[jalaliNow.month - 1]} ${_digits(jalaliNow.year.toString())}  •  نمای کلی امور مالی',
@@ -612,12 +650,17 @@ class _DarmaHomeState extends State<DarmaHome> {
             decoration: BoxDecoration(
               borderRadius: BorderRadius.circular(24),
               gradient: const LinearGradient(
-                colors: [Color(0xFF101C2D), Color(0xFF1B3448), Color(0xFF142536)],
+                colors: [
+                  Color(0xFF101C2D),
+                  Color(0xFF1B3448),
+                  Color(0xFF142536)
+                ],
                 begin: Alignment.topRight,
                 end: Alignment.bottomLeft,
                 stops: [0, .58, 1],
               ),
-              border: Border.all(color: const Color(0xFFD6B36A).withValues(alpha: .28)),
+              border: Border.all(
+                  color: const Color(0xFFD6B36A).withValues(alpha: .28)),
               boxShadow: const [
                 BoxShadow(
                   color: Color(0x24101C2D),
@@ -639,7 +682,8 @@ class _DarmaHomeState extends State<DarmaHome> {
                           width: 34,
                           height: 34,
                           decoration: BoxDecoration(
-                            color: const Color(0xFFD6B36A).withValues(alpha: .15),
+                            color:
+                                const Color(0xFFD6B36A).withValues(alpha: .15),
                             borderRadius: BorderRadius.circular(12),
                           ),
                           child: const Icon(
@@ -812,26 +856,37 @@ class _DarmaHomeState extends State<DarmaHome> {
             children: [
               Expanded(
                 child: Text('عملیات سریع',
-                  style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                    fontWeight: FontWeight.w900,
-                    letterSpacing: -.2,
-                  )),
+                    style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                          fontWeight: FontWeight.w900,
+                          letterSpacing: -.2,
+                        )),
               ),
               Text('ثبت و مدیریت',
-                style: TextStyle(fontSize: 10, color: Theme.of(context).colorScheme.onSurfaceVariant)),
+                  style: TextStyle(
+                      fontSize: 10,
+                      color: Theme.of(context).colorScheme.onSurfaceVariant)),
             ],
           ),
           const SizedBox(height: 12),
           Row(
             children: [
-              Expanded(child: _actionTile('دریافت', Icons.south_west_rounded,
-                const Color(0xFF35B78A), () => _newTransaction(kind: 'income'))),
+              Expanded(
+                  child: _actionTile(
+                      'دریافت',
+                      Icons.south_west_rounded,
+                      const Color(0xFF35B78A),
+                      () => _newTransaction(kind: 'income'))),
               const SizedBox(width: 10),
-              Expanded(child: _actionTile('پرداخت', Icons.north_east_rounded,
-                const Color(0xFFE16B70), () => _newTransaction(kind: 'expense'))),
+              Expanded(
+                  child: _actionTile(
+                      'پرداخت',
+                      Icons.north_east_rounded,
+                      const Color(0xFFE16B70),
+                      () => _newTransaction(kind: 'expense'))),
               const SizedBox(width: 10),
-              Expanded(child: _actionTile('انتقال', Icons.swap_horiz_rounded,
-                const Color(0xFFD69B45), () => _newTransfer())),
+              Expanded(
+                  child: _actionTile('انتقال', Icons.swap_horiz_rounded,
+                      const Color(0xFFD69B45), () => _newTransfer())),
             ],
           ),
           const SizedBox(height: 19),
@@ -839,15 +894,16 @@ class _DarmaHomeState extends State<DarmaHome> {
             children: [
               Expanded(
                 child: Text('آخرین تراکنش‌ها',
-                  style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                    fontWeight: FontWeight.w900,
-                  )),
+                    style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                          fontWeight: FontWeight.w900,
+                        )),
               ),
               TextButton(
                 onPressed: () => setState(() => _tab = 1),
                 style: TextButton.styleFrom(
                   foregroundColor: accent,
-                  textStyle: const TextStyle(fontSize: 11, fontWeight: FontWeight.w800),
+                  textStyle: const TextStyle(
+                      fontSize: 11, fontWeight: FontWeight.w800),
                 ),
                 child: const Text('مشاهده همه  ←'),
               ),
@@ -901,32 +957,35 @@ class _DarmaHomeState extends State<DarmaHome> {
               ),
               const Spacer(),
               Icon(Icons.more_horiz_rounded,
-                color: Theme.of(context).colorScheme.onSurfaceVariant, size: 18),
+                  color: Theme.of(context).colorScheme.onSurfaceVariant,
+                  size: 18),
             ],
           ),
           const SizedBox(height: 8),
-          Text(title, style: TextStyle(
-            fontSize: 10,
-            color: Theme.of(context).colorScheme.onSurfaceVariant,
-            fontWeight: FontWeight.w600,
-          )),
+          Text(title,
+              style: TextStyle(
+                fontSize: 10,
+                color: Theme.of(context).colorScheme.onSurfaceVariant,
+                fontWeight: FontWeight.w600,
+              )),
           const SizedBox(height: 5),
           FittedBox(
             fit: BoxFit.scaleDown,
             alignment: Alignment.centerRight,
             child: Text(_moneyText(amount),
-              maxLines: 1,
-              style: TextStyle(
-                color: Theme.of(context).colorScheme.onSurface,
-                fontSize: 16,
-                fontWeight: FontWeight.w900,
-                letterSpacing: -.3,
-                fontFeatures: const [ui.FontFeature.tabularFigures()],
-              )),
+                maxLines: 1,
+                style: TextStyle(
+                  color: Theme.of(context).colorScheme.onSurface,
+                  fontSize: 16,
+                  fontWeight: FontWeight.w900,
+                  letterSpacing: -.3,
+                  fontFeatures: const [ui.FontFeature.tabularFigures()],
+                )),
           ),
           const SizedBox(height: 3),
           Text('ریال',
-            style: TextStyle(fontSize: 9, color: color, fontWeight: FontWeight.w800)),
+              style: TextStyle(
+                  fontSize: 9, color: color, fontWeight: FontWeight.w800)),
         ],
       ),
     );
@@ -1010,11 +1069,12 @@ class _DarmaHomeState extends State<DarmaHome> {
                   child: Icon(icon, color: color, size: 21),
                 ),
                 const SizedBox(height: 7),
-                Text(title, style: const TextStyle(
-                  fontSize: 11,
-                  fontWeight: FontWeight.w900,
-                  letterSpacing: -.1,
-                )),
+                Text(title,
+                    style: const TextStyle(
+                      fontSize: 11,
+                      fontWeight: FontWeight.w900,
+                      letterSpacing: -.1,
+                    )),
               ],
             ),
           ),
@@ -1025,7 +1085,9 @@ class _DarmaHomeState extends State<DarmaHome> {
         onRefresh: _refresh,
         child: ListView.builder(
           padding: const EdgeInsets.fromLTRB(16, 14, 16, 112),
-          itemCount: _visibleTransactions.isEmpty ? 2 : _visibleTransactions.length + 1,
+          itemCount: _visibleTransactions.isEmpty
+              ? 2
+              : _visibleTransactions.length + 1,
           itemBuilder: (context, index) {
             if (index == 0) {
               return Card(
@@ -1033,42 +1095,60 @@ class _DarmaHomeState extends State<DarmaHome> {
                 margin: const EdgeInsets.only(bottom: 16),
                 shape: RoundedRectangleBorder(
                   borderRadius: BorderRadius.circular(22),
-                  side: BorderSide(color: Theme.of(context).colorScheme.primary.withValues(alpha: .28)),
+                  side: BorderSide(
+                      color: Theme.of(context)
+                          .colorScheme
+                          .primary
+                          .withValues(alpha: .28)),
                 ),
                 child: Container(
                   decoration: BoxDecoration(
                     gradient: LinearGradient(
-                      colors: [Theme.of(context).colorScheme.primary.withValues(alpha: .13), Theme.of(context).colorScheme.surface],
-                      begin: Alignment.topRight, end: Alignment.bottomLeft,
+                      colors: [
+                        Theme.of(context)
+                            .colorScheme
+                            .primary
+                            .withValues(alpha: .13),
+                        Theme.of(context).colorScheme.surface
+                      ],
+                      begin: Alignment.topRight,
+                      end: Alignment.bottomLeft,
                     ),
                   ),
                   child: ListTile(
-                  contentPadding: const EdgeInsets.symmetric(horizontal: 18, vertical: 9),
-                  leading: Container(
-                    width: 44, height: 44,
-                    decoration: BoxDecoration(
-                      color: Theme.of(context).colorScheme.primary.withValues(alpha: .15),
-                      borderRadius: BorderRadius.circular(14),
+                    contentPadding:
+                        const EdgeInsets.symmetric(horizontal: 18, vertical: 9),
+                    leading: Container(
+                      width: 44,
+                      height: 44,
+                      decoration: BoxDecoration(
+                        color: Theme.of(context)
+                            .colorScheme
+                            .primary
+                            .withValues(alpha: .15),
+                        borderRadius: BorderRadius.circular(14),
+                      ),
+                      child: Icon(Icons.calendar_month_rounded,
+                          color: Theme.of(context).colorScheme.primary),
                     ),
-                    child: Icon(Icons.calendar_month_rounded, color: Theme.of(context).colorScheme.primary),
-                  ),
-                  title: Text(_selectedTransactionDate == null
-                      ? 'همه تاریخ‌ها'
-                      : 'تراکنش‌های ${_jalaliDateLabel(_selectedTransactionDate!)}'),
-                  subtitle: const Text('برای انتخاب روز موردنظر لمس کنید'),
-                  trailing: Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      if (_selectedTransactionDate != null)
-                        IconButton(
-                          tooltip: 'حذف فیلتر تاریخ',
-                          onPressed: () => setState(() => _selectedTransactionDate = null),
-                          icon: const Icon(Icons.close),
-                        ),
-                      const Icon(Icons.date_range_outlined),
-                    ],
-                  ),
-                  onTap: _pickTransactionDate,
+                    title: Text(_selectedTransactionDate == null
+                        ? 'همه تاریخ‌ها'
+                        : 'تراکنش‌های ${_jalaliDateLabel(_selectedTransactionDate!)}'),
+                    subtitle: const Text('برای انتخاب روز موردنظر لمس کنید'),
+                    trailing: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        if (_selectedTransactionDate != null)
+                          IconButton(
+                            tooltip: 'حذف فیلتر تاریخ',
+                            onPressed: () =>
+                                setState(() => _selectedTransactionDate = null),
+                            icon: const Icon(Icons.close),
+                          ),
+                        const Icon(Icons.date_range_outlined),
+                      ],
+                    ),
+                    onTap: _pickTransactionDate,
                   ),
                 ),
               );
@@ -1078,8 +1158,8 @@ class _DarmaHomeState extends State<DarmaHome> {
                 padding: const EdgeInsets.only(top: 110),
                 child: _EmptyState(
                   text: _selectedTransactionDate == null
-                    ? 'هنوز تراکنشی ثبت نشده است'
-                    : 'در این روز تراکنشی ثبت نشده است',
+                      ? 'هنوز تراکنشی ثبت نشده است'
+                      : 'در این روز تراکنشی ثبت نشده است',
                 ),
               );
             }
@@ -1102,74 +1182,87 @@ class _DarmaHomeState extends State<DarmaHome> {
                     '${fee > 0 ? ' • کارمزد: ${_moneyText(fee)} ریال' : ''}';
             final transactionColor = transfer
                 ? const Color(0xFFD69B45)
-                : income ? const Color(0xFF35B78A) : const Color(0xFFE16B70);
+                : income
+                    ? const Color(0xFF35B78A)
+                    : const Color(0xFFE16B70);
             return Card(
               clipBehavior: Clip.antiAlias,
               margin: const EdgeInsets.only(bottom: 11),
               shape: RoundedRectangleBorder(
                 borderRadius: BorderRadius.circular(20),
-                side: BorderSide(color: transactionColor.withValues(alpha: .25)),
+                side:
+                    BorderSide(color: transactionColor.withValues(alpha: .25)),
               ),
               child: Container(
                 decoration: BoxDecoration(
-                  border: Border(right: BorderSide(color: transactionColor, width: 4)),
+                  border: Border(
+                      right: BorderSide(color: transactionColor, width: 4)),
                 ),
                 child: ListTile(
-                contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 9),
-                onTap: transfer
-                    ? () => _newTransfer(existing: transaction)
-                    : () => _newTransaction(existing: transaction),
-                leading: CircleAvatar(
-                  backgroundColor: transactionColor.withValues(alpha: 0.14),
-                  child: Icon(
-                    transfer ? Icons.sync_alt : income ? Icons.south_west : Icons.north_east,
-                    color: transactionColor,
+                  contentPadding:
+                      const EdgeInsets.symmetric(horizontal: 14, vertical: 9),
+                  onTap: transfer
+                      ? () => _newTransfer(existing: transaction)
+                      : () => _newTransaction(existing: transaction),
+                  leading: CircleAvatar(
+                    backgroundColor: transactionColor.withValues(alpha: 0.14),
+                    child: Icon(
+                      transfer
+                          ? Icons.sync_alt
+                          : income
+                              ? Icons.south_west
+                              : Icons.north_east,
+                      color: transactionColor,
+                    ),
                   ),
-                ),
-                title: Text(transaction['title'] as String,
-                  style: const TextStyle(fontWeight: FontWeight.w700)),
-                subtitle: Text(subtitle),
-                trailing: PopupMenuButton<String>(
-                  onSelected: (value) async {
-                    if (value == 'edit') {
-                      if (transfer) {
-                        await _newTransfer(existing: transaction);
-                      } else {
-                        await _newTransaction(existing: transaction);
-                      }
-                    } else if (value == 'delete') {
-                      final confirm = await showDialog<bool>(
-                        context: context,
-                        builder: (dialogContext) => AlertDialog(
-                          title: const Text('حذف تراکنش'),
-                          content: Text(
-                            'تراکنش «${transaction['title']}» حذف شود؟ این عملیات قابل بازگشت نیست.'),
-                          actions: [
-                            TextButton(
-                              onPressed: () => Navigator.pop(dialogContext, false),
-                              child: const Text('انصراف')),
-                            FilledButton.tonal(
-                              onPressed: () => Navigator.pop(dialogContext, true),
-                              child: const Text('حذف')),
-                          ],
-                        ),
-                      );
-                      if (confirm == true) {
-                        try {
-                          await DarmaDatabase.instance.deleteTransaction(transaction['id'] as int);
-                          await _refresh();
-                        } catch (error) {
-                          _notice(error.toString());
+                  title: Text(transaction['title'] as String,
+                      style: const TextStyle(fontWeight: FontWeight.w700)),
+                  subtitle: Text(subtitle),
+                  trailing: PopupMenuButton<String>(
+                    onSelected: (value) async {
+                      if (value == 'edit') {
+                        if (transfer) {
+                          await _newTransfer(existing: transaction);
+                        } else {
+                          await _newTransaction(existing: transaction);
+                        }
+                      } else if (value == 'delete') {
+                        final confirm = await showDialog<bool>(
+                          context: context,
+                          builder: (dialogContext) => AlertDialog(
+                            title: const Text('حذف تراکنش'),
+                            content: Text(
+                                'تراکنش «${transaction['title']}» حذف شود؟ این عملیات قابل بازگشت نیست.'),
+                            actions: [
+                              TextButton(
+                                  onPressed: () =>
+                                      Navigator.pop(dialogContext, false),
+                                  child: const Text('انصراف')),
+                              FilledButton.tonal(
+                                  onPressed: () =>
+                                      Navigator.pop(dialogContext, true),
+                                  child: const Text('حذف')),
+                            ],
+                          ),
+                        );
+                        if (confirm == true) {
+                          try {
+                            await DarmaDatabase.instance
+                                .deleteTransaction(transaction['id'] as int);
+                            await _refresh();
+                          } catch (error) {
+                            _notice(error.toString());
+                          }
                         }
                       }
-                    }
-                  },
-                  itemBuilder: (_) => const [
-                    PopupMenuItem(value: 'edit', child: Text('ویرایش')),
-                    PopupMenuItem(value: 'delete', child: Text('حذف')),
-                  ],
-                ),
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                    },
+                    itemBuilder: (_) => const [
+                      PopupMenuItem(value: 'edit', child: Text('ویرایش')),
+                      PopupMenuItem(value: 'delete', child: Text('حذف')),
+                    ],
+                  ),
+                  shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(16)),
                 ),
               ),
             );
@@ -1217,31 +1310,41 @@ class _DarmaHomeState extends State<DarmaHome> {
                       color: scheme.primary.withValues(alpha: .16),
                       borderRadius: BorderRadius.circular(15),
                     ),
-                    child: Icon(Icons.grid_view_rounded, color: scheme.primary, size: 24),
+                    child: Icon(Icons.grid_view_rounded,
+                        color: scheme.primary, size: 24),
                   ),
                   const Spacer(),
                   Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                    padding:
+                        const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
                     decoration: BoxDecoration(
                       color: scheme.primary.withValues(alpha: .12),
                       borderRadius: BorderRadius.circular(20),
                     ),
                     child: Text('DARMA • TOOLS',
-                      style: TextStyle(color: scheme.primary, fontSize: 9,
-                        fontWeight: FontWeight.w900, letterSpacing: .7)),
+                        style: TextStyle(
+                            color: scheme.primary,
+                            fontSize: 9,
+                            fontWeight: FontWeight.w900,
+                            letterSpacing: .7)),
                   ),
                 ],
               ),
               const SizedBox(height: 17),
               const Text('همه ابزارهای دارما',
-                style: TextStyle(fontSize: 21, fontWeight: FontWeight.w900)),
+                  style: TextStyle(fontSize: 21, fontWeight: FontWeight.w900)),
               const SizedBox(height: 6),
-              Text('مدیریت حساب‌ها، برنامه‌ریزی مالی و تنظیمات را از این بخش دنبال کنید.',
-                style: TextStyle(fontSize: 11, height: 1.8, color: scheme.onSurfaceVariant)),
+              Text(
+                  'مدیریت حساب‌ها، برنامه‌ریزی مالی و تنظیمات را از این بخش دنبال کنید.',
+                  style: TextStyle(
+                      fontSize: 11,
+                      height: 1.8,
+                      color: scheme.onSurfaceVariant)),
               const SizedBox(height: 15),
               Row(
                 children: [
-                  _moreSummaryChip(Icons.account_balance_wallet_outlined, 'مدیریت مالی'),
+                  _moreSummaryChip(
+                      Icons.account_balance_wallet_outlined, 'مدیریت مالی'),
                   const SizedBox(width: 8),
                   _moreSummaryChip(Icons.tune_rounded, 'شخصی‌سازی'),
                 ],
@@ -1260,18 +1363,25 @@ class _DarmaHomeState extends State<DarmaHome> {
           count: 'مدیریت حساب‌ها',
           initiallyExpanded: true,
           children: [
-            _moreMenuItem('سرفصل‌های اصلی و معین', 'ساختار دارایی، بدهی، درآمد و هزینه',
-              Icons.account_tree_outlined, true,
-              () => Navigator.of(context).push(MaterialPageRoute(
-                builder: (_) => const AccountsPage()))),
-            _moreMenuItem('حساب‌های بانکی و صندوق', 'مشاهده و ویرایش حساب‌های مالی',
-              Icons.account_balance_outlined, true,
-              () => Navigator.of(context).push(MaterialPageRoute(
-                builder: (_) => const AccountsPage()))),
+            _moreMenuItem(
+                'سرفصل‌های اصلی و معین',
+                'ساختار دارایی، بدهی، درآمد و هزینه',
+                Icons.account_tree_outlined,
+                true,
+                () => Navigator.of(context).push(
+                    MaterialPageRoute(builder: (_) => const AccountsPage()))),
+            _moreMenuItem(
+                'حساب‌های بانکی و صندوق',
+                'مشاهده و ویرایش حساب‌های مالی',
+                Icons.account_balance_outlined,
+                true,
+                () => Navigator.of(context).push(
+                    MaterialPageRoute(builder: (_) => const AccountsPage()))),
           ],
         ),
         const SizedBox(height: 20),
-        _moreSectionTitle('تعهدات و اعتبار', 'مدیریت روابط مالی و پرداخت‌های آتی'),
+        _moreSectionTitle(
+            'تعهدات و اعتبار', 'مدیریت روابط مالی و پرداخت‌های آتی'),
         const SizedBox(height: 10),
         _moreMenuGroup(
           icon: Icons.handshake_outlined,
@@ -1280,10 +1390,18 @@ class _DarmaHomeState extends State<DarmaHome> {
           subtitle: 'وام‌های دریافتی و پرداخت‌های اقساطی',
           count: 'در حال توسعه',
           children: [
-            _moreMenuItem('وام‌های دریافتی', 'اصل بدهی، مانده و اقساط',
-              Icons.savings_outlined, false, () => _comingSoon('وام‌های دریافتی')),
-            _moreMenuItem('اقساط و سررسیدها', 'برنامه پرداخت و یادآوری سررسید',
-              Icons.event_repeat_rounded, false, () => _comingSoon('اقساط و سررسیدها')),
+            _moreMenuItem(
+                'وام‌های دریافتی',
+                'اصل بدهی، مانده و اقساط',
+                Icons.savings_outlined,
+                false,
+                () => _comingSoon('وام‌های دریافتی')),
+            _moreMenuItem(
+                'اقساط و سررسیدها',
+                'برنامه پرداخت و یادآوری سررسید',
+                Icons.event_repeat_rounded,
+                false,
+                () => _comingSoon('اقساط و سررسیدها')),
           ],
         ),
         _moreMenuGroup(
@@ -1293,10 +1411,18 @@ class _DarmaHomeState extends State<DarmaHome> {
           subtitle: 'خرید اقساطی و بدهی پلتفرم‌ها',
           count: 'در حال توسعه',
           children: [
-            _moreMenuItem('پلتفرم‌های اعتباری', 'تارا، دیجی‌پی و سایر سرویس‌ها',
-              Icons.credit_score_outlined, false, () => _comingSoon('پلتفرم‌های اعتباری')),
-            _moreMenuItem('اقساط خریدها', 'مبالغ پرداخت‌شده و مانده بدهی',
-              Icons.receipt_long_outlined, false, () => _comingSoon('اقساط خریدها')),
+            _moreMenuItem(
+                'پلتفرم‌های اعتباری',
+                'تارا، دیجی‌پی و سایر سرویس‌ها',
+                Icons.credit_score_outlined,
+                false,
+                () => _comingSoon('پلتفرم‌های اعتباری')),
+            _moreMenuItem(
+                'اقساط خریدها',
+                'مبالغ پرداخت‌شده و مانده بدهی',
+                Icons.receipt_long_outlined,
+                false,
+                () => _comingSoon('اقساط خریدها')),
           ],
         ),
         _moreMenuGroup(
@@ -1306,10 +1432,18 @@ class _DarmaHomeState extends State<DarmaHome> {
           subtitle: 'طلب‌ها، بدهی‌ها و گردش حساب افراد',
           count: 'در حال توسعه',
           children: [
-            _moreMenuItem('فهرست اشخاص', 'مدیریت افراد و طرف‌حساب‌ها',
-              Icons.people_outline_rounded, false, () => _comingSoon('فهرست اشخاص')),
-            _moreMenuItem('مانده طلب و بدهی', 'نمای خالص و جزئیات گردش اشخاص',
-              Icons.compare_arrows_rounded, false, () => _comingSoon('مانده طلب و بدهی')),
+            _moreMenuItem(
+                'فهرست اشخاص',
+                'مدیریت افراد و طرف‌حساب‌ها',
+                Icons.people_outline_rounded,
+                false,
+                () => _comingSoon('فهرست اشخاص')),
+            _moreMenuItem(
+                'مانده طلب و بدهی',
+                'نمای خالص و جزئیات گردش اشخاص',
+                Icons.compare_arrows_rounded,
+                false,
+                () => _comingSoon('مانده طلب و بدهی')),
           ],
         ),
         const SizedBox(height: 20),
@@ -1322,10 +1456,18 @@ class _DarmaHomeState extends State<DarmaHome> {
           subtitle: 'تعیین سقف هزینه برای سرفصل‌ها',
           count: 'در حال توسعه',
           children: [
-            _moreMenuItem('بودجه ماهانه', 'تخصیص بودجه در سطح کل، معین و تفصیلی',
-              Icons.calendar_view_month_rounded, false, () => _comingSoon('بودجه ماهانه')),
-            _moreMenuItem('عملکرد بودجه', 'مقایسه هزینه واقعی با بودجه',
-              Icons.query_stats_rounded, false, () => _comingSoon('عملکرد بودجه')),
+            _moreMenuItem(
+                'بودجه ماهانه',
+                'تخصیص بودجه در سطح کل، معین و تفصیلی',
+                Icons.calendar_view_month_rounded,
+                false,
+                () => _comingSoon('بودجه ماهانه')),
+            _moreMenuItem(
+                'عملکرد بودجه',
+                'مقایسه هزینه واقعی با بودجه',
+                Icons.query_stats_rounded,
+                false,
+                () => _comingSoon('عملکرد بودجه')),
           ],
         ),
         _moreMenuGroup(
@@ -1336,9 +1478,13 @@ class _DarmaHomeState extends State<DarmaHome> {
           count: 'در حال توسعه',
           children: [
             _moreMenuItem('هدف جدید', 'تعریف مبلغ هدف و مهلت دستیابی',
-              Icons.add_task_rounded, false, () => _comingSoon('هدف جدید')),
-            _moreMenuItem('پیشرفت اهداف', 'میزان تحقق واریزهای هدفمند',
-              Icons.track_changes_rounded, false, () => _comingSoon('پیشرفت اهداف')),
+                Icons.add_task_rounded, false, () => _comingSoon('هدف جدید')),
+            _moreMenuItem(
+                'پیشرفت اهداف',
+                'میزان تحقق واریزهای هدفمند',
+                Icons.track_changes_rounded,
+                false,
+                () => _comingSoon('پیشرفت اهداف')),
           ],
         ),
         const SizedBox(height: 20),
@@ -1351,10 +1497,18 @@ class _DarmaHomeState extends State<DarmaHome> {
           subtitle: 'نمایش رویدادها و تراکنش‌ها در تقویم شمسی',
           count: 'در حال توسعه',
           children: [
-            _moreMenuItem('نمای ماهانه', 'مرور رویدادهای مالی هر ماه',
-              Icons.calendar_view_month_outlined, false, () => _comingSoon('تقویم مالی')),
-            _moreMenuItem('سررسیدهای پیش‌رو', 'مشاهده پرداخت‌های نزدیک',
-              Icons.notifications_active_outlined, false, () => _comingSoon('سررسیدهای پیش‌رو')),
+            _moreMenuItem(
+                'نمای ماهانه',
+                'مرور رویدادهای مالی هر ماه',
+                Icons.calendar_view_month_outlined,
+                false,
+                () => _comingSoon('تقویم مالی')),
+            _moreMenuItem(
+                'سررسیدهای پیش‌رو',
+                'مشاهده پرداخت‌های نزدیک',
+                Icons.notifications_active_outlined,
+                false,
+                () => _comingSoon('سررسیدهای پیش‌رو')),
           ],
         ),
         _moreMenuGroup(
@@ -1365,7 +1519,7 @@ class _DarmaHomeState extends State<DarmaHome> {
           count: 'فعال',
           children: [
             _moreMenuItem('انتخاب پوسته', 'تم‌های روشن، تیره و رنگی دارما',
-              Icons.color_lens_outlined, true, _showThemes),
+                Icons.color_lens_outlined, true, _showThemes),
           ],
         ),
         const SizedBox(height: 18),
@@ -1380,15 +1534,24 @@ class _DarmaHomeState extends State<DarmaHome> {
             children: [
               Icon(Icons.shield_outlined, color: scheme.primary, size: 20),
               const SizedBox(width: 10),
-              Expanded(child: Text('اطلاعات مالی شما به‌صورت محلی روی همین دستگاه نگهداری می‌شود.',
-                style: TextStyle(fontSize: 10, height: 1.7, color: scheme.onSurfaceVariant))),
+              Expanded(
+                  child: Text(
+                      'اطلاعات مالی شما به‌صورت محلی روی همین دستگاه نگهداری می‌شود.',
+                      style: TextStyle(
+                          fontSize: 10,
+                          height: 1.7,
+                          color: scheme.onSurfaceVariant))),
             ],
           ),
         ),
         const SizedBox(height: 14),
-        Center(child: Text('DARMA  •  Hamed.hn',
-          style: TextStyle(fontSize: 10, letterSpacing: .6,
-            fontWeight: FontWeight.w800, color: scheme.onSurfaceVariant))),
+        Center(
+            child: Text('DARMA  •  Hamed.hn',
+                style: TextStyle(
+                    fontSize: 10,
+                    letterSpacing: .6,
+                    fontWeight: FontWeight.w800,
+                    color: scheme.onSurfaceVariant))),
       ],
     );
   }
@@ -1405,24 +1568,35 @@ class _DarmaHomeState extends State<DarmaHome> {
       child: Row(mainAxisSize: MainAxisSize.min, children: [
         Icon(icon, size: 13, color: scheme.primary),
         const SizedBox(width: 6),
-        Text(label, style: const TextStyle(fontSize: 9, fontWeight: FontWeight.w700)),
+        Text(label,
+            style: const TextStyle(fontSize: 9, fontWeight: FontWeight.w700)),
       ]),
     );
   }
 
   Widget _moreSectionTitle(String title, String subtitle) => Row(
-    children: [
-      Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-        Text(title, style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w900)),
-        const SizedBox(height: 3),
-        Text(subtitle, style: TextStyle(fontSize: 10,
-          color: Theme.of(context).colorScheme.onSurfaceVariant)),
-      ])),
-      Container(width: 5, height: 29, decoration: BoxDecoration(
-        color: Theme.of(context).colorScheme.primary,
-        borderRadius: BorderRadius.circular(5))),
-    ],
-  );
+        children: [
+          Expanded(
+              child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                Text(title,
+                    style: const TextStyle(
+                        fontSize: 14, fontWeight: FontWeight.w900)),
+                const SizedBox(height: 3),
+                Text(subtitle,
+                    style: TextStyle(
+                        fontSize: 10,
+                        color: Theme.of(context).colorScheme.onSurfaceVariant)),
+              ])),
+          Container(
+              width: 5,
+              height: 29,
+              decoration: BoxDecoration(
+                  color: Theme.of(context).colorScheme.primary,
+                  borderRadius: BorderRadius.circular(5))),
+        ],
+      );
 
   Widget _moreMenuGroup({
     required IconData icon,
@@ -1448,22 +1622,34 @@ class _DarmaHomeState extends State<DarmaHome> {
           tilePadding: const EdgeInsets.symmetric(horizontal: 15, vertical: 5),
           childrenPadding: const EdgeInsets.fromLTRB(12, 0, 12, 12),
           leading: Container(
-            width: 43, height: 43,
-            decoration: BoxDecoration(color: color.withValues(alpha: .13),
-              borderRadius: BorderRadius.circular(14)),
+            width: 43,
+            height: 43,
+            decoration: BoxDecoration(
+                color: color.withValues(alpha: .13),
+                borderRadius: BorderRadius.circular(14)),
             child: Icon(icon, color: color, size: 22),
           ),
-          title: Text(title, style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w900)),
+          title: Text(title,
+              style:
+                  const TextStyle(fontSize: 13, fontWeight: FontWeight.w900)),
           subtitle: Padding(
             padding: const EdgeInsets.only(top: 4),
-            child: Text(subtitle, style: TextStyle(fontSize: 10,
-              color: scheme.onSurfaceVariant, height: 1.5)),
+            child: Text(subtitle,
+                style: TextStyle(
+                    fontSize: 10, color: scheme.onSurfaceVariant, height: 1.5)),
           ),
-          trailing: Column(mainAxisAlignment: MainAxisAlignment.center, children: [
-            Text(count, style: TextStyle(fontSize: 8, fontWeight: FontWeight.w800,
-              color: count == 'فعال' ? const Color(0xFF35B78A) : scheme.onSurfaceVariant)),
+          trailing:
+              Column(mainAxisAlignment: MainAxisAlignment.center, children: [
+            Text(count,
+                style: TextStyle(
+                    fontSize: 8,
+                    fontWeight: FontWeight.w800,
+                    color: count == 'فعال'
+                        ? const Color(0xFF35B78A)
+                        : scheme.onSurfaceVariant)),
             const SizedBox(height: 3),
-            Icon(Icons.keyboard_arrow_down_rounded, color: scheme.onSurfaceVariant, size: 18),
+            Icon(Icons.keyboard_arrow_down_rounded,
+                color: scheme.onSurfaceVariant, size: 18),
           ]),
           children: children,
         ),
@@ -1485,15 +1671,28 @@ class _DarmaHomeState extends State<DarmaHome> {
           child: Padding(
             padding: const EdgeInsets.symmetric(horizontal: 11, vertical: 11),
             child: Row(children: [
-              Icon(icon, size: 18, color: enabled ? scheme.primary : scheme.onSurfaceVariant),
+              Icon(icon,
+                  size: 18,
+                  color: enabled ? scheme.primary : scheme.onSurfaceVariant),
               const SizedBox(width: 11),
-              Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                Text(title, style: const TextStyle(fontSize: 11, fontWeight: FontWeight.w800)),
-                const SizedBox(height: 3),
-                Text(subtitle, style: TextStyle(fontSize: 9, color: scheme.onSurfaceVariant)),
-              ])),
-              Icon(enabled ? Icons.arrow_back_ios_new_rounded : Icons.lock_clock_outlined,
-                size: 13, color: scheme.onSurfaceVariant),
+              Expanded(
+                  child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                    Text(title,
+                        style: const TextStyle(
+                            fontSize: 11, fontWeight: FontWeight.w800)),
+                    const SizedBox(height: 3),
+                    Text(subtitle,
+                        style: TextStyle(
+                            fontSize: 9, color: scheme.onSurfaceVariant)),
+                  ])),
+              Icon(
+                  enabled
+                      ? Icons.arrow_back_ios_new_rounded
+                      : Icons.lock_clock_outlined,
+                  size: 13,
+                  color: scheme.onSurfaceVariant),
             ]),
           ),
         ),
@@ -1524,10 +1723,12 @@ class _DarmaHomeState extends State<DarmaHome> {
                   crossAxisAlignment: CrossAxisAlignment.stretch,
                   children: [
                     const Text('شخصی‌سازی ظاهر دارما',
-                      style: TextStyle(fontSize: 18, fontWeight: FontWeight.w900)),
+                        style: TextStyle(
+                            fontSize: 18, fontWeight: FontWeight.w900)),
                     const SizedBox(height: 5),
                     Text('پوسته دلخواه خود را انتخاب کنید.',
-                      style: TextStyle(fontSize: 11, color: scheme.onSurfaceVariant)),
+                        style: TextStyle(
+                            fontSize: 11, color: scheme.onSurfaceVariant)),
                     const SizedBox(height: 17),
                     for (final entry in _themes.entries)
                       Padding(
@@ -1539,7 +1740,8 @@ class _DarmaHomeState extends State<DarmaHome> {
                             Navigator.pop(sheetContext);
                           },
                           child: Container(
-                            padding: const EdgeInsets.symmetric(horizontal: 13, vertical: 12),
+                            padding: const EdgeInsets.symmetric(
+                                horizontal: 13, vertical: 12),
                             decoration: BoxDecoration(
                               color: widget.themeName == entry.key
                                   ? entry.value.withValues(alpha: .10)
@@ -1553,21 +1755,27 @@ class _DarmaHomeState extends State<DarmaHome> {
                               ),
                             ),
                             child: Row(children: [
-                              Container(width: 34, height: 34,
-                                decoration: BoxDecoration(
-                                  color: entry.value,
-                                  borderRadius: BorderRadius.circular(11),
-                                ),
-                                child: const Icon(Icons.palette_outlined,
-                                  color: Colors.white, size: 18)),
+                              Container(
+                                  width: 34,
+                                  height: 34,
+                                  decoration: BoxDecoration(
+                                    color: entry.value,
+                                    borderRadius: BorderRadius.circular(11),
+                                  ),
+                                  child: const Icon(Icons.palette_outlined,
+                                      color: Colors.white, size: 18)),
                               const SizedBox(width: 12),
-                              Expanded(child: Text(entry.key,
-                                style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w800))),
+                              Expanded(
+                                  child: Text(entry.key,
+                                      style: const TextStyle(
+                                          fontSize: 12,
+                                          fontWeight: FontWeight.w800))),
                               if (widget.themeName == entry.key)
-                                Icon(Icons.check_circle_rounded, color: entry.value, size: 21)
+                                Icon(Icons.check_circle_rounded,
+                                    color: entry.value, size: 21)
                               else
                                 Icon(Icons.chevron_left_rounded,
-                                  color: scheme.onSurfaceVariant, size: 20),
+                                    color: scheme.onSurfaceVariant, size: 20),
                             ]),
                           ),
                         ),
@@ -1591,8 +1799,18 @@ class _DarmaHomeState extends State<DarmaHome> {
         var month = initial.month;
         var selectedDay = initial.day;
         const monthNames = [
-          'فروردین', 'اردیبهشت', 'خرداد', 'تیر', 'مرداد', 'شهریور',
-          'مهر', 'آبان', 'آذر', 'دی', 'بهمن', 'اسفند',
+          'فروردین',
+          'اردیبهشت',
+          'خرداد',
+          'تیر',
+          'مرداد',
+          'شهریور',
+          'مهر',
+          'آبان',
+          'آذر',
+          'دی',
+          'بهمن',
+          'اسفند',
         ];
         return StatefulBuilder(
           builder: (context, setSheet) {
@@ -1765,13 +1983,17 @@ class _DarmaHomeState extends State<DarmaHome> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(title, style: const TextStyle(
-                  fontSize: 19, fontWeight: FontWeight.w900,
-                )),
+                Text(title,
+                    style: const TextStyle(
+                      fontSize: 19,
+                      fontWeight: FontWeight.w900,
+                    )),
                 const SizedBox(height: 5),
-                Text(subtitle, style: TextStyle(
-                  fontSize: 12, color: scheme.onSurfaceVariant,
-                )),
+                Text(subtitle,
+                    style: TextStyle(
+                      fontSize: 12,
+                      color: scheme.onSurfaceVariant,
+                    )),
               ],
             ),
           ),
@@ -1824,8 +2046,12 @@ class _DarmaHomeState extends State<DarmaHome> {
           : ((existing['fee'] as num?)?.toInt() ?? 0).toString(),
     );
     final formKey = GlobalKey<FormState>();
-    var transactionDate = DateTime.tryParse(existing?['created_at'] as String? ?? '')?.toLocal() ?? DateTime.now();
-    transactionDate = DateTime(transactionDate.year, transactionDate.month, transactionDate.day, 12);
+    var transactionDate =
+        DateTime.tryParse(existing?['created_at'] as String? ?? '')
+                ?.toLocal() ??
+            DateTime.now();
+    transactionDate = DateTime(
+        transactionDate.year, transactionDate.month, transactionDate.day, 12);
     var isSaving = false;
 
     final result = await showModalBottomSheet<bool>(
@@ -1851,16 +2077,20 @@ class _DarmaHomeState extends State<DarmaHome> {
                   crossAxisAlignment: CrossAxisAlignment.stretch,
                   children: [
                     _transactionFormHero(
-                      title: existing == null ? 'انتقال بین حساب‌ها' : 'ویرایش انتقال',
+                      title: existing == null
+                          ? 'انتقال بین حساب‌ها'
+                          : 'ویرایش انتقال',
                       subtitle: 'جابجایی امن وجه میان حساب‌های شما',
                       icon: Icons.swap_horiz_rounded,
                       color: const Color(0xFFE5A443),
                     ),
                     const SizedBox(height: 18),
                     _transactionDateField(transactionDate, () async {
-                      final picked = await _showJalaliDatePicker(transactionDate);
+                      final picked =
+                          await _showJalaliDatePicker(transactionDate);
                       if (picked != null) {
-                        setSheet(() => transactionDate = DateTime(picked.year, picked.month, picked.day, 12));
+                        setSheet(() => transactionDate = DateTime(
+                            picked.year, picked.month, picked.day, 12));
                       }
                     }),
                     const SizedBox(height: 12),
@@ -1942,44 +2172,45 @@ class _DarmaHomeState extends State<DarmaHome> {
                       onPressed: isSaving
                           ? null
                           : () async {
-                        if (isSaving || !formKey.currentState!.validate()) return;
-                        setSheet(() => isSaving = true);
-                        try {
-                          final feeValue = _parseAmount(fee.text);
-                          if (existing == null) {
-                            await DarmaDatabase.instance.addTransfer(
-                              title: title.text.trim(),
-                              amount: _parseAmount(amount.text),
-                              fromAccountId: fromId,
-                              toAccountId: toId,
-                              fee: feeValue,
-                              transactionDate: transactionDate,
-                            );
-                          } else {
-                            await DarmaDatabase.instance.updateTransfer(
-                              transactionId: existing['id'] as int,
-                              title: title.text.trim(),
-                              amount: _parseAmount(amount.text),
-                              fromAccountId: fromId,
-                              toAccountId: toId,
-                              fee: feeValue,
-                              transactionDate: transactionDate,
-                            );
-                          }
-                          if (ctx.mounted) Navigator.pop(ctx, true);
-                        } catch (error) {
-                          if (ctx.mounted) {
-                            setSheet(() => isSaving = false);
-                            ScaffoldMessenger.of(ctx).showSnackBar(
-                              SnackBar(
-                                content: Text(error
-                                    .toString()
-                                    .replaceFirst('Exception: ', '')),
-                              ),
-                            );
-                          }
-                        }
-                      },
+                              if (isSaving || !formKey.currentState!.validate())
+                                return;
+                              setSheet(() => isSaving = true);
+                              try {
+                                final feeValue = _parseAmount(fee.text);
+                                if (existing == null) {
+                                  await DarmaDatabase.instance.addTransfer(
+                                    title: title.text.trim(),
+                                    amount: _parseAmount(amount.text),
+                                    fromAccountId: fromId,
+                                    toAccountId: toId,
+                                    fee: feeValue,
+                                    transactionDate: transactionDate,
+                                  );
+                                } else {
+                                  await DarmaDatabase.instance.updateTransfer(
+                                    transactionId: existing['id'] as int,
+                                    title: title.text.trim(),
+                                    amount: _parseAmount(amount.text),
+                                    fromAccountId: fromId,
+                                    toAccountId: toId,
+                                    fee: feeValue,
+                                    transactionDate: transactionDate,
+                                  );
+                                }
+                                if (ctx.mounted) Navigator.pop(ctx, true);
+                              } catch (error) {
+                                if (ctx.mounted) {
+                                  setSheet(() => isSaving = false);
+                                  ScaffoldMessenger.of(ctx).showSnackBar(
+                                    SnackBar(
+                                      content: Text(error
+                                          .toString()
+                                          .replaceFirst('Exception: ', '')),
+                                    ),
+                                  );
+                                }
+                              }
+                            },
                       icon: const Icon(Icons.sync_alt),
                       label: isSaving
                           ? const SizedBox(
@@ -1987,7 +2218,9 @@ class _DarmaHomeState extends State<DarmaHome> {
                               height: 18,
                               child: CircularProgressIndicator(strokeWidth: 2),
                             )
-                          : Text(existing == null ? 'ثبت انتقال' : 'ذخیره تغییرات'),
+                          : Text(existing == null
+                              ? 'ثبت انتقال'
+                              : 'ذخیره تغییرات'),
                     ),
                   ],
                 ),
@@ -2008,25 +2241,26 @@ class _DarmaHomeState extends State<DarmaHome> {
     String selected = kind ?? (existing?['kind'] as String? ?? 'expense');
     if (selected == 'transfer') selected = 'expense';
     final accounts = await DarmaDatabase.instance.getAccountSummaries();
-    final financialAccounts = (await DarmaDatabase.instance.getTransactionAccounts('asset'))
-        .where((a) {
-          final isLeaf = (a['child_count'] as num).toInt() == 0;
-          final kind = a['account_kind'] as String?;
-          final legacyFinancial = const {
-            'کیف پول نقدی',
-            'حساب بانکی',
-            'کیف پول الکترونیکی',
-          }.contains(a['name']);
-          return isLeaf && (kind != null || legacyFinancial);
-        })
-        .toList();
+    final financialAccounts =
+        (await DarmaDatabase.instance.getTransactionAccounts('asset'))
+            .where((a) {
+      final isLeaf = (a['child_count'] as num).toInt() == 0;
+      final kind = a['account_kind'] as String?;
+      final legacyFinancial = const {
+        'کیف پول نقدی',
+        'حساب بانکی',
+        'کیف پول الکترونیکی',
+      }.contains(a['name']);
+      return isLeaf && (kind != null || legacyFinancial);
+    }).toList();
     if (financialAccounts.isEmpty) {
-      _notice('ابتدا یک حساب بانکی، صندوق یا کیف پول در بخش تعاریف ایجاد کنید.');
+      _notice(
+          'ابتدا یک حساب بانکی، صندوق یا کیف پول در بخش تعاریف ایجاد کنید.');
       return;
     }
     int selectedFinancialAccountId =
         existing?['financial_account_id'] as int? ??
-        financialAccounts.first['id'] as int;
+            financialAccounts.first['id'] as int;
     if (!financialAccounts.any((a) => a['id'] == selectedFinancialAccountId)) {
       selectedFinancialAccountId = financialAccounts.first['id'] as int;
     }
@@ -2074,8 +2308,12 @@ class _DarmaHomeState extends State<DarmaHome> {
           : ((existing['fee'] as num?)?.toInt() ?? 0).toString(),
     );
     final formKey = GlobalKey<FormState>();
-    var transactionDate = DateTime.tryParse(existing?['created_at'] as String? ?? '')?.toLocal() ?? DateTime.now();
-    transactionDate = DateTime(transactionDate.year, transactionDate.month, transactionDate.day, 12);
+    var transactionDate =
+        DateTime.tryParse(existing?['created_at'] as String? ?? '')
+                ?.toLocal() ??
+            DateTime.now();
+    transactionDate = DateTime(
+        transactionDate.year, transactionDate.month, transactionDate.day, 12);
     var isSaving = false;
 
     final result = await showModalBottomSheet<bool>(
@@ -2107,8 +2345,12 @@ class _DarmaHomeState extends State<DarmaHome> {
                     children: [
                       _transactionFormHero(
                         title: existing == null
-                            ? (selected == 'income' ? 'ثبت دریافت' : 'ثبت پرداخت')
-                            : (selected == 'income' ? 'ویرایش دریافت' : 'ویرایش پرداخت'),
+                            ? (selected == 'income'
+                                ? 'ثبت دریافت'
+                                : 'ثبت پرداخت')
+                            : (selected == 'income'
+                                ? 'ویرایش دریافت'
+                                : 'ویرایش پرداخت'),
                         subtitle: selected == 'income'
                             ? 'ثبت دقیق ورودی‌های مالی شما'
                             : 'مدیریت پرداخت‌ها و هزینه‌ها',
@@ -2146,9 +2388,11 @@ class _DarmaHomeState extends State<DarmaHome> {
                       ),
                       const SizedBox(height: 14),
                       _transactionDateField(transactionDate, () async {
-                        final picked = await _showJalaliDatePicker(transactionDate);
+                        final picked =
+                            await _showJalaliDatePicker(transactionDate);
                         if (picked != null) {
-                          setSheet(() => transactionDate = DateTime(picked.year, picked.month, picked.day, 12));
+                          setSheet(() => transactionDate = DateTime(
+                              picked.year, picked.month, picked.day, 12));
                         }
                       }),
                       const SizedBox(height: 14),
@@ -2270,58 +2514,64 @@ class _DarmaHomeState extends State<DarmaHome> {
                         onPressed: isSaving
                             ? null
                             : () async {
-                          if (isSaving ||
-                              !formKey.currentState!.validate() ||
-                              selectedCategoryId == null) return;
-                          setSheet(() => isSaving = true);
-                          try {
-                            final feeValue = selected == 'expense'
-                                ? _parseAmount(fee.text)
-                                : 0;
-                            if (existing == null) {
-                              await DarmaDatabase.instance.addSimpleTransaction(
-                                title: title.text.trim(),
-                                amount: _parseAmount(amount.text),
-                                kind: selected,
-                                categoryAccountId: selectedCategoryId,
-                                financialAccountId: selectedFinancialAccountId,
-                                fee: feeValue,
-                                transactionDate: transactionDate,
-                              );
-                            } else {
-                              await DarmaDatabase.instance
-                                  .updateSimpleTransaction(
-                                transactionId: existing['id'] as int,
-                                title: title.text.trim(),
-                                amount: _parseAmount(amount.text),
-                                kind: selected,
-                                categoryAccountId: selectedCategoryId,
-                                financialAccountId: selectedFinancialAccountId,
-                                fee: feeValue,
-                                transactionDate: transactionDate,
-                              );
-                            }
-                            if (ctx.mounted) Navigator.pop(ctx, true);
-                          } catch (error) {
-                            if (ctx.mounted) {
-                              setSheet(() => isSaving = false);
-                              ScaffoldMessenger.of(ctx).showSnackBar(
-                                SnackBar(
-                                  content: Text(error
-                                      .toString()
-                                      .replaceFirst('Exception: ', '')),
-                                ),
-                              );
-                            }
-                          }
-                        },
+                                if (isSaving ||
+                                    !formKey.currentState!.validate() ||
+                                    selectedCategoryId == null) return;
+                                setSheet(() => isSaving = true);
+                                try {
+                                  final feeValue = selected == 'expense'
+                                      ? _parseAmount(fee.text)
+                                      : 0;
+                                  if (existing == null) {
+                                    await DarmaDatabase.instance
+                                        .addSimpleTransaction(
+                                      title: title.text.trim(),
+                                      amount: _parseAmount(amount.text),
+                                      kind: selected,
+                                      categoryAccountId: selectedCategoryId,
+                                      financialAccountId:
+                                          selectedFinancialAccountId,
+                                      fee: feeValue,
+                                      transactionDate: transactionDate,
+                                    );
+                                  } else {
+                                    await DarmaDatabase.instance
+                                        .updateSimpleTransaction(
+                                      transactionId: existing['id'] as int,
+                                      title: title.text.trim(),
+                                      amount: _parseAmount(amount.text),
+                                      kind: selected,
+                                      categoryAccountId: selectedCategoryId,
+                                      financialAccountId:
+                                          selectedFinancialAccountId,
+                                      fee: feeValue,
+                                      transactionDate: transactionDate,
+                                    );
+                                  }
+                                  if (ctx.mounted) Navigator.pop(ctx, true);
+                                } catch (error) {
+                                  if (ctx.mounted) {
+                                    setSheet(() => isSaving = false);
+                                    ScaffoldMessenger.of(ctx).showSnackBar(
+                                      SnackBar(
+                                        content: Text(error
+                                            .toString()
+                                            .replaceFirst('Exception: ', '')),
+                                      ),
+                                    );
+                                  }
+                                }
+                              },
                         child: isSaving
                             ? const SizedBox(
                                 width: 18,
                                 height: 18,
-                                child: CircularProgressIndicator(strokeWidth: 2),
+                                child:
+                                    CircularProgressIndicator(strokeWidth: 2),
                               )
-                            : Text(existing == null ? 'ثبت تراکنش' : 'ذخیره تغییرات'),
+                            : Text(existing == null
+                                ? 'ثبت تراکنش'
+                                : 'ذخیره تغییرات'),
                       ),
                     ],
                   ),
@@ -2340,28 +2590,6 @@ class _DarmaHomeState extends State<DarmaHome> {
 
   void _notice(String text) =>
       ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(text)));
-}
-
-
-class _DarmaAnimatedIndexedStack extends StatelessWidget {
-  const _DarmaAnimatedIndexedStack({
-    required this.index,
-    required this.children,
-  });
-
-  final int index;
-  final List<Widget> children;
-
-  @override
-  Widget build(BuildContext context) {
-    // Keep every tab mounted and let Flutter's native IndexedStack handle
-    // layout/visibility. The custom opacity/slide stack could leave the
-    // page body visually empty on some Android renderers.
-    return IndexedStack(
-      index: index,
-      children: children,
-    );
-  }
 }
 
 class _DarmaCardPainter extends CustomPainter {
@@ -2411,9 +2639,12 @@ class _DarmaCardPainter extends CustomPainter {
     final path = Path()
       ..moveTo(size.width * .47, 0)
       ..cubicTo(
-        size.width * .66, size.height * .20,
-        size.width * .36, size.height * .58,
-        size.width * .58, size.height,
+        size.width * .66,
+        size.height * .20,
+        size.width * .36,
+        size.height * .58,
+        size.width * .58,
+        size.height,
       );
     canvas.drawPath(path, softTeal);
 

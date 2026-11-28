@@ -85,7 +85,8 @@ class TransactionJournal {
     }
     if (fee > 0) {
       _validateAccountId(feeAccountId);
-      if (feeAccountId == financialAccountId || feeAccountId == expenseAccountId) {
+      if (feeAccountId == financialAccountId ||
+          feeAccountId == expenseAccountId) {
         throw ArgumentError('حساب کارمزد باید از حساب مالی و هزینه جدا باشد');
       }
     }

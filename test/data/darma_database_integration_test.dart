@@ -36,7 +36,8 @@ void main() {
   }
 
   setUp(() async {
-    final uniquePath = 'darma_integration_${DateTime.now().microsecondsSinceEpoch}.db';
+    final uniquePath =
+        'darma_integration_${DateTime.now().microsecondsSinceEpoch}.db';
     database = DarmaDatabase.forTesting(databasePath: uniquePath);
     rawDatabase = await database.database;
 
@@ -78,7 +79,8 @@ void main() {
   });
 
   group('DarmaDatabase SQLite integration', () {
-    test('records income, expense fee and transfer with correct balances', () async {
+    test('records income, expense fee and transfer with correct balances',
+        () async {
       await database.addSimpleTransaction(
         title: 'حقوق ماهانه',
         amount: 100000,
@@ -121,7 +123,8 @@ void main() {
       }
     });
 
-    test('updates income, expense and transfer without leaving stale entries', () async {
+    test('updates income, expense and transfer without leaving stale entries',
+        () async {
       await database.addSimpleTransaction(
         title: 'حقوق اولیه',
         amount: 100000,
@@ -218,7 +221,8 @@ void main() {
       expect(await balanceOf(incomeId), 0);
     });
 
-    test('rolls back an update when rebuilding journal entries fails', () async {
+    test('rolls back an update when rebuilding journal entries fails',
+        () async {
       await database.addSimpleTransaction(
         title: 'هزینه ثبت‌شده',
         amount: 10000,
