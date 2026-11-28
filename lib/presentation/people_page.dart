@@ -1,3 +1,5 @@
+import 'dart:ui' as ui;
+
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import '../data/darma_database.dart';
@@ -52,7 +54,7 @@ class _PeoplePageState extends State<PeoplePage> {
     final result = await showDialog<bool>(
       context: context,
       builder: (dialogContext) => Directionality(
-        textDirection: TextDirection.rtl,
+        textDirection: ui.TextDirection.rtl,
         child: AlertDialog(
           title: Text(person == null ? 'افزودن شخص' : 'ویرایش شخص'),
           content: Form(
@@ -154,7 +156,7 @@ class _PeoplePageState extends State<PeoplePage> {
     final confirmed = await showDialog<bool>(
       context: context,
       builder: (ctx) => Directionality(
-        textDirection: TextDirection.rtl,
+        textDirection: ui.TextDirection.rtl,
         child: AlertDialog(
           title: const Text('حذف شخص'),
           content: Text(
@@ -193,7 +195,7 @@ class _PeoplePageState extends State<PeoplePage> {
       isScrollControlled: true,
       showDragHandle: true,
       builder: (sheetContext) => Directionality(
-        textDirection: TextDirection.rtl,
+        textDirection: ui.TextDirection.rtl,
         child: SafeArea(
           child: SizedBox(
             height: MediaQuery.of(sheetContext).size.height * .72,
@@ -269,7 +271,7 @@ class _PeoplePageState extends State<PeoplePage> {
     final scheme = Theme.of(context).colorScheme;
 
     return Directionality(
-      textDirection: TextDirection.rtl,
+      textDirection: ui.TextDirection.rtl,
       child: Scaffold(
         appBar: AppBar(
           title: const Text('اشخاص و طرف‌حساب‌ها'),
