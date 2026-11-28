@@ -2354,33 +2354,12 @@ class _DarmaAnimatedIndexedStack extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Stack(
-      fit: StackFit.expand,
-      children: [
-        for (var i = 0; i < children.length; i++)
-          Positioned.fill(
-            child: IgnorePointer(
-              ignoring: i != index,
-              child: ExcludeSemantics(
-                excluding: i != index,
-                child: AnimatedOpacity(
-                  opacity: i == index ? 1 : 0,
-                  duration: const Duration(milliseconds: 170),
-                  curve: Curves.easeOut,
-                  child: AnimatedSlide(
-                    offset: i == index ? Offset.zero : const Offset(0, .012),
-                    duration: const Duration(milliseconds: 170),
-                    curve: Curves.easeOutCubic,
-                    child: TickerMode(
-                      enabled: i == index,
-                      child: children[i],
-                    ),
-                  ),
-                ),
-              ),
-            ),
-          ),
-      ],
+    // Keep every tab mounted and let Flutter's native IndexedStack handle
+    // layout/visibility. The custom opacity/slide stack could leave the
+    // page body visually empty on some Android renderers.
+    return IndexedStack(
+      index: index,
+      children: children,
     );
   }
 }
