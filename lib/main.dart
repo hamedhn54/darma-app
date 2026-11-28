@@ -443,62 +443,96 @@ class _DarmaHomeState extends State<DarmaHome> {
                 label: const Text('ثبت تراکنش'),
               )
             : null,
-        bottomNavigationBar: Container(
-          decoration: BoxDecoration(
-            color: Theme.of(context).colorScheme.surface,
-            border: Border(
-              top: BorderSide(
-                color: Theme.of(context).colorScheme.outline.withValues(alpha: .38),
-              ),
-            ),
-            boxShadow: [
-              BoxShadow(
-                color: Colors.black.withValues(
-                  alpha: Theme.of(context).brightness == Brightness.dark ? .18 : .045,
+        bottomNavigationBar: SafeArea(
+          top: false,
+          child: Padding(
+            padding: const EdgeInsets.only(left: 16, right: 16, top: 8, bottom: 8),
+            child: Center(
+              child: Container(
+                width: 264,
+                height: 60,
+                padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 8),
+                decoration: BoxDecoration(
+                  color: Theme.of(context).brightness == Brightness.dark
+                      ? const Color(0xE6102929)
+                      : Theme.of(context).colorScheme.surface.withValues(alpha: .97),
+                  borderRadius: BorderRadius.circular(36),
+                  border: Border.all(
+                    color: Theme.of(context).colorScheme.outline.withValues(alpha: .28),
+                  ),
+                  boxShadow: [
+                    BoxShadow(
+                      color: Colors.black.withValues(
+                        alpha: Theme.of(context).brightness == Brightness.dark ? .28 : .10,
+                      ),
+                      blurRadius: 24,
+                      offset: const Offset(0, 8),
+                    ),
+                  ],
                 ),
-                blurRadius: 22,
-                offset: const Offset(0, -6),
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                  children: [
+                    _buildNavItem(0, Icons.home_outlined, Icons.home_rounded),
+                    _buildNavItem(1, Icons.receipt_long_outlined, Icons.receipt_long_rounded),
+                    _buildNavItem(2, Icons.query_stats_outlined, Icons.query_stats_rounded),
+                    _buildNavItem(3, Icons.grid_view_outlined, Icons.grid_view_rounded),
+                  ],
+                ),
               ),
-            ],
-          ),
-          child: NavigationBar(
-            height: 76,
-            elevation: 0,
-            backgroundColor: Colors.transparent,
-            indicatorColor: Theme.of(context).colorScheme.primary.withValues(alpha: .14),
-            indicatorShape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(15),
             ),
-            labelBehavior: NavigationDestinationLabelBehavior.alwaysShow,
-            selectedIndex: _tab,
-            onDestinationSelected: (v) => setState(() => _tab = v),
-            destinations: const [
-              NavigationDestination(
-                icon: Icon(Icons.home_outlined, size: 22),
-                selectedIcon: Icon(Icons.home_rounded, size: 23),
-                label: 'خانه',
-              ),
-              NavigationDestination(
-                icon: Icon(Icons.receipt_long_outlined, size: 22),
-                selectedIcon: Icon(Icons.receipt_long_rounded, size: 23),
-                label: 'تراکنش‌ها',
-              ),
-              NavigationDestination(
-                icon: Icon(Icons.query_stats_outlined, size: 22),
-                selectedIcon: Icon(Icons.query_stats_rounded, size: 23),
-                label: 'گزارش‌ها',
-              ),
-              NavigationDestination(
-                icon: Icon(Icons.grid_view_outlined, size: 22),
-                selectedIcon: Icon(Icons.grid_view_rounded, size: 23),
-                label: 'بیشتر',
-              ),
-            ],
           ),
         ),
       ),
     );
   }
+
+  Widget _buildNavItem(int index, IconData icon, IconData selectedIcon) {
+    final selected = _tab == index;
+    const accent = Color(0xFF20D8BE);
+
+    return Expanded(
+      child: Center(
+        child: Material(
+          color: Colors.transparent,
+          child: InkWell(
+            onTap: () => setState(() => _tab = index),
+            customBorder: const CircleBorder(),
+            child: AnimatedContainer(
+              duration: const Duration(milliseconds: 220),
+              curve: Curves.easeOutCubic,
+              width: 43,
+              height: 43,
+              decoration: BoxDecoration(
+                shape: BoxShape.circle,
+                color: selected ? accent.withValues(alpha: .19) : Colors.transparent,
+                border: selected
+                    ? Border.all(color: accent.withValues(alpha: .48), width: 1)
+                    : null,
+                boxShadow: selected
+                    ? [
+                        BoxShadow(
+                          color: accent.withValues(alpha: .32),
+                          blurRadius: 16,
+                          spreadRadius: 1,
+                        ),
+                      ]
+                    : const [],
+              ),
+              child: Icon(
+                selected ? selectedIcon : icon,
+                size: 22,
+                color: selected
+                    ? accent
+                    : Theme.of(context).colorScheme.onSurface.withValues(alpha: .76),
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
 
   Widget _dashboard() {
     final now = DateTime.now();
