@@ -435,7 +435,7 @@ class _DarmaHomeState extends State<DarmaHome> {
             const SizedBox(width: 8),
           ],
         ),
-        body: SafeArea(child: IndexedStack(index: _tab, children: pages)),
+        body: SafeArea(child: _DarmaAnimatedIndexedStack(index: _tab, children: pages)),
         floatingActionButton: _tab == 0 || _tab == 1
             ? FloatingActionButton.extended(
                 onPressed: () => _newTransaction(),
@@ -608,9 +608,9 @@ class _DarmaHomeState extends State<DarmaHome> {
           ),
           const SizedBox(height: 18),
           Container(
-            padding: const EdgeInsets.fromLTRB(20, 19, 20, 20),
+            padding: const EdgeInsets.fromLTRB(16, 14, 16, 15),
             decoration: BoxDecoration(
-              borderRadius: BorderRadius.circular(28),
+              borderRadius: BorderRadius.circular(24),
               gradient: const LinearGradient(
                 colors: [Color(0xFF101C2D), Color(0xFF1B3448), Color(0xFF142536)],
                 begin: Alignment.topRight,
@@ -626,13 +626,15 @@ class _DarmaHomeState extends State<DarmaHome> {
                 ),
               ],
             ),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Row(
-                  children: [
-                    Container(
-                      width: 36,
+            child: CustomPaint(
+              painter: _DarmaCardPainter(),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    children: [
+                      Container(
+                        width: 34,
                       height: 36,
                       decoration: BoxDecoration(
                         color: const Color(0xFFD6B36A).withValues(alpha: .15),
@@ -641,9 +643,9 @@ class _DarmaHomeState extends State<DarmaHome> {
                       child: const Icon(Icons.account_balance_wallet_rounded,
                         color: Color(0xFFE3C783), size: 19),
                     ),
-                    const SizedBox(width: 10),
-                    const Expanded(
-                      child: Text('موجودی خالص حساب‌های نقدی',
+                    const SizedBox(width: 9),
+                      const Expanded(
+                        child: Text('موجودی خالص حساب‌های نقدی',
                         style: TextStyle(
                           color: Color(0xFFE8EDF3),
                           fontSize: 13,
@@ -654,8 +656,8 @@ class _DarmaHomeState extends State<DarmaHome> {
                       color: Color(0xFF8DA4B7), size: 17),
                   ],
                 ),
-                const SizedBox(height: 15),
-                DropdownButtonFormField<int?>(
+                const SizedBox(height: 10),
+                  DropdownButtonFormField<int?>(
                   value: _selectedCashAccountId,
                   isExpanded: true,
                   dropdownColor: const Color(0xFF1B3043),
@@ -696,8 +698,8 @@ class _DarmaHomeState extends State<DarmaHome> {
                   onChanged: (value) =>
                       setState(() => _selectedCashAccountId = value),
                 ),
-                const SizedBox(height: 17),
-                FittedBox(
+                const SizedBox(height: 11),
+                  FittedBox(
                   fit: BoxFit.scaleDown,
                   alignment: Alignment.centerRight,
                   child: Text(
@@ -705,8 +707,8 @@ class _DarmaHomeState extends State<DarmaHome> {
                     maxLines: 1,
                     style: const TextStyle(
                       color: Colors.white,
-                      fontSize: 31,
-                      height: 1.25,
+                      fontSize: 27,
+                      height: 1.18,
                       fontWeight: FontWeight.w900,
                       letterSpacing: -.6,
                       fontFeatures: [ui.FontFeature.tabularFigures()],
@@ -717,9 +719,9 @@ class _DarmaHomeState extends State<DarmaHome> {
                 const Text('ریال',
                   style: TextStyle(color: Color(0xFFD6B36A), fontSize: 12,
                     fontWeight: FontWeight.w800)),
-                const SizedBox(height: 16),
-                Container(height: 1, color: Colors.white.withValues(alpha: .12)),
-                const SizedBox(height: 12),
+                const SizedBox(height: 11),
+                  Container(height: 1, color: Colors.white.withValues(alpha: .12)),
+                  const SizedBox(height: 9),
                 Row(
                   children: [
                     const Icon(Icons.lock_outline_rounded,
@@ -737,7 +739,7 @@ class _DarmaHomeState extends State<DarmaHome> {
               ],
             ),
           ),
-          const SizedBox(height: 22),
+          const SizedBox(height: 15),
           Row(
             children: [
               Expanded(
@@ -761,7 +763,7 @@ class _DarmaHomeState extends State<DarmaHome> {
               ),
             ],
           ),
-          const SizedBox(height: 24),
+          const SizedBox(height: 18),
           Row(
             children: [
               Expanded(
@@ -788,7 +790,7 @@ class _DarmaHomeState extends State<DarmaHome> {
                 const Color(0xFFD69B45), () => _newTransfer())),
             ],
           ),
-          const SizedBox(height: 25),
+          const SizedBox(height: 19),
           Row(
             children: [
               Expanded(
@@ -826,7 +828,7 @@ class _DarmaHomeState extends State<DarmaHome> {
     final surface = Theme.of(context).colorScheme.surface;
     final outline = Theme.of(context).colorScheme.outline;
     return Container(
-      padding: const EdgeInsets.fromLTRB(13, 14, 13, 15),
+      padding: const EdgeInsets.fromLTRB(11, 10, 11, 11),
       decoration: BoxDecoration(
         color: surface,
         borderRadius: BorderRadius.circular(20),
@@ -845,8 +847,8 @@ class _DarmaHomeState extends State<DarmaHome> {
           Row(
             children: [
               Container(
-                width: 31,
-                height: 31,
+                width: 28,
+                height: 28,
                 decoration: BoxDecoration(
                   color: color.withValues(alpha: .12),
                   borderRadius: BorderRadius.circular(10),
@@ -858,7 +860,7 @@ class _DarmaHomeState extends State<DarmaHome> {
                 color: Theme.of(context).colorScheme.onSurfaceVariant, size: 18),
             ],
           ),
-          const SizedBox(height: 12),
+          const SizedBox(height: 8),
           Text(title, style: TextStyle(
             fontSize: 10,
             color: Theme.of(context).colorScheme.onSurfaceVariant,
@@ -872,7 +874,7 @@ class _DarmaHomeState extends State<DarmaHome> {
               maxLines: 1,
               style: TextStyle(
                 color: Theme.of(context).colorScheme.onSurface,
-                fontSize: 18,
+                fontSize: 16,
                 fontWeight: FontWeight.w900,
                 letterSpacing: -.3,
                 fontFeatures: const [ui.FontFeature.tabularFigures()],
@@ -937,7 +939,7 @@ class _DarmaHomeState extends State<DarmaHome> {
           onTap: tap,
           borderRadius: BorderRadius.circular(19),
           child: Container(
-            padding: const EdgeInsets.symmetric(vertical: 15, horizontal: 5),
+            padding: const EdgeInsets.symmetric(vertical: 11, horizontal: 5),
             decoration: BoxDecoration(
               borderRadius: BorderRadius.circular(19),
               border: Border.all(color: color.withValues(alpha: .22)),
@@ -953,8 +955,8 @@ class _DarmaHomeState extends State<DarmaHome> {
             child: Column(
               children: [
                 Container(
-                  width: 43,
-                  height: 43,
+                  width: 38,
+                  height: 38,
                   decoration: BoxDecoration(
                     color: color.withValues(alpha: .13),
                     borderRadius: BorderRadius.circular(15),
@@ -963,7 +965,7 @@ class _DarmaHomeState extends State<DarmaHome> {
                   alignment: Alignment.center,
                   child: Icon(icon, color: color, size: 21),
                 ),
-                const SizedBox(height: 9),
+                const SizedBox(height: 7),
                 Text(title, style: const TextStyle(
                   fontSize: 11,
                   fontWeight: FontWeight.w900,
@@ -2294,6 +2296,112 @@ class _DarmaHomeState extends State<DarmaHome> {
 
   void _notice(String text) =>
       ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(text)));
+}
+
+
+class _DarmaAnimatedIndexedStack extends StatelessWidget {
+  const _DarmaAnimatedIndexedStack({
+    required this.index,
+    required this.children,
+  });
+
+  final int index;
+  final List<Widget> children;
+
+  @override
+  Widget build(BuildContext context) {
+    return Stack(
+      fit: StackFit.expand,
+      children: [
+        for (var i = 0; i < children.length; i++)
+          Positioned.fill(
+            child: IgnorePointer(
+              ignoring: i != index,
+              child: ExcludeSemantics(
+                excluding: i != index,
+                child: AnimatedOpacity(
+                  opacity: i == index ? 1 : 0,
+                  duration: const Duration(milliseconds: 170),
+                  curve: Curves.easeOut,
+                  child: AnimatedSlide(
+                    offset: i == index ? Offset.zero : const Offset(0, .012),
+                    duration: const Duration(milliseconds: 170),
+                    curve: Curves.easeOutCubic,
+                    child: children[i],
+                  ),
+                ),
+              ),
+            ),
+          ),
+      ],
+    );
+  }
+}
+
+class _DarmaCardPainter extends CustomPainter {
+  @override
+  void paint(Canvas canvas, Size size) {
+    final gold = const Color(0xFFD6B36A);
+    final teal = const Color(0xFF35B7B0);
+    final softGold = Paint()
+      ..color = gold.withValues(alpha: .13)
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = 1.15;
+    final softTeal = Paint()
+      ..color = teal.withValues(alpha: .10)
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = 1;
+    final fillGold = Paint()..color = gold.withValues(alpha: .075);
+
+    // Interlocking orbital arcs create a subtle, bespoke financial motif.
+    canvas.drawCircle(
+      Offset(size.width * .10, size.height * .05),
+      size.height * .82,
+      softGold,
+    );
+    canvas.drawCircle(
+      Offset(size.width * .10, size.height * .05),
+      size.height * .62,
+      softTeal,
+    );
+    canvas.drawCircle(
+      Offset(size.width * .91, size.height * .94),
+      size.height * .72,
+      softGold,
+    );
+    canvas.drawCircle(
+      Offset(size.width * .91, size.height * .94),
+      size.height * .49,
+      softTeal,
+    );
+
+    final path = Path()
+      ..moveTo(size.width * .47, 0)
+      ..cubicTo(
+        size.width * .66, size.height * .20,
+        size.width * .36, size.height * .58,
+        size.width * .58, size.height,
+      );
+    canvas.drawPath(path, softTeal);
+
+    final diagonal = Path()
+      ..moveTo(size.width * .70, 0)
+      ..lineTo(size.width, size.height * .34)
+      ..moveTo(size.width * .77, 0)
+      ..lineTo(size.width, size.height * .25);
+    canvas.drawPath(diagonal, softGold);
+
+    for (var i = 0; i < 5; i++) {
+      canvas.drawCircle(
+        Offset(size.width * (.70 + i * .045), size.height * (.68 - i * .055)),
+        i.isEven ? 2.1 : 1.35,
+        fillGold,
+      );
+    }
+  }
+
+  @override
+  bool shouldRepaint(covariant _DarmaCardPainter oldDelegate) => false;
 }
 
 class _EmptyState extends StatelessWidget {
