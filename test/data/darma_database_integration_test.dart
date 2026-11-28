@@ -79,6 +79,76 @@ void main() {
   });
 
   group('DarmaDatabase SQLite integration', () {
+    test('manages people and calculates their signed ledger balance', () async {
+      final personId = await database.createPerson(
+        fullName: '  شخص آزمایشی  ',
+        phone: '09120000000',
+        note: 'یادداشت آزمایشی',
+      );
+
+      var people = await database.getPeople();
+      expect(people, hasLength(1));
+      expect(people.single['full_name'], 'شخص آزمایشی');
+      expect(people.single['phone'], '09120000000');
+      expect(people.single['net_balance'], 0);
+
+      await database.updatePerson(
+        personId: personId,
+        fullName: 'شخص ویرایش‌شده',
+        phone: '',
+        note: 'یادداشت جدید',
+      );
+      await database.setPersonActive(personId: personId, isActive: false);
+      expect(await database.getPeople(), isEmpty);
+      people = await database.getPeople(includeInactive: true);
+      expect(people.single['full_name'], 'شخص ویرایش‌شده');
+      expect(people.single['phone'], isNull);
+      expect(people.single['is_active'], 0);
+
+      final transactionId = await rawDatabase.insert('journal_transactions', {
+        'title': 'سند آزمایشی شخص',
+        'amount': 40000,
+        'fee': 0,
+        'kind': 'expense',
+        'created_at': DateTime.now().toIso8601String(),
+      });
+      await rawDatabase.insert('journal_entries', {
+        'transaction_id': transactionId,
+        'account_id': expenseId,
+        'debit': 40000,
+        'credit': 0,
+        'person_id': personId,
+      });
+      await rawDatabase.insert('journal_entries', {
+        'transaction_id': transactionId,
+        'account_id': bankOneId,
+        'debit': 0,
+        'credit': 40000,
+      });
+
+      people = await database.getPeople(includeInactive: true);
+      expect(people.single['net_balance'], 40000);
+      expect(people.single['receivable_balance'], 40000);
+      expect(people.single['payable_balance'], 0);
+      expect(await database.getPersonLedger(personId), hasLength(1));
+
+      await expectLater(
+        database.deletePerson(personId),
+        throwsA(isA<StateError>()),
+      );
+    });
+
+    test('rejects blank person names and allows deleting unused people',
+        () async {
+      await expectLater(
+        database.createPerson(fullName: '   '),
+        throwsA(isA<ArgumentError>()),
+      );
+      final personId = await database.createPerson(fullName: 'شخص بدون سابقه');
+      await database.deletePerson(personId);
+      expect(await database.getPeople(), isEmpty);
+    });
+
     test('records income, expense fee and transfer with correct balances',
         () async {
       await database.addSimpleTransaction(
