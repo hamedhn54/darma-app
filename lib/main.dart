@@ -2327,7 +2327,10 @@ class _DarmaAnimatedIndexedStack extends StatelessWidget {
                     offset: i == index ? Offset.zero : const Offset(0, .012),
                     duration: const Duration(milliseconds: 170),
                     curve: Curves.easeOutCubic,
-                    child: children[i],
+                    child: TickerMode(
+                      enabled: i == index,
+                      child: children[i],
+                    ),
                   ),
                 ),
               ),
@@ -2341,6 +2344,13 @@ class _DarmaAnimatedIndexedStack extends StatelessWidget {
 class _DarmaCardPainter extends CustomPainter {
   @override
   void paint(Canvas canvas, Size size) {
+    canvas.save();
+    canvas.clipRRect(
+      RRect.fromRectAndRadius(
+        Offset.zero & size,
+        const Radius.circular(24),
+      ),
+    );
     final gold = const Color(0xFFD6B36A);
     final teal = const Color(0xFF35B7B0);
     final softGold = Paint()
@@ -2398,6 +2408,7 @@ class _DarmaCardPainter extends CustomPainter {
         fillGold,
       );
     }
+    canvas.restore();
   }
 
   @override
