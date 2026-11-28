@@ -19,7 +19,7 @@ class DarmaDatabase {
     final path = _databasePath ?? p.join(await getDatabasesPath(), 'darma.db');
     _db = await openDatabase(
       path,
-      version: 6,
+      version: 7,
       onConfigure: (db) async {
         await db.execute('PRAGMA foreign_keys = ON');
       },
@@ -43,6 +43,28 @@ class DarmaDatabase {
         await _seedDefaultAccounts(db);
       },
       onUpgrade: (db, oldVersion, newVersion) async {
+        if (oldVersion < 7) {
+          await db.execute('''
+            CREATE TABLE people (
+              id INTEGER PRIMARY KEY AUTOINCREMENT,
+              full_name TEXT NOT NULL,
+              phone TEXT,
+              note TEXT,
+              is_active INTEGER NOT NULL DEFAULT 1 CHECK(is_active IN (0, 1)),
+              created_at TEXT NOT NULL,
+              updated_at TEXT NOT NULL
+            )
+          ''');
+          await db.execute(
+            'ALTER TABLE journal_entries ADD COLUMN person_id INTEGER REFERENCES people(id) ON DELETE RESTRICT',
+          );
+          await db.execute(
+            'CREATE INDEX idx_entries_person ON journal_entries(person_id)',
+          );
+          await db.execute(
+            'CREATE INDEX idx_people_name ON people(full_name COLLATE NOCASE)',
+          );
+        }
         if (oldVersion < 4) {
           await db.execute(
             'ALTER TABLE journal_transactions ADD COLUMN fee INTEGER NOT NULL DEFAULT 0',
@@ -105,6 +127,17 @@ class DarmaDatabase {
       )
     ''');
     await db.execute('''
+      CREATE TABLE people (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        full_name TEXT NOT NULL,
+        phone TEXT,
+        note TEXT,
+        is_active INTEGER NOT NULL DEFAULT 1 CHECK(is_active IN (0, 1)),
+        created_at TEXT NOT NULL,
+        updated_at TEXT NOT NULL
+      )
+    ''');
+    await db.execute('''
       CREATE TABLE journal_transactions (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
         title TEXT NOT NULL,
@@ -122,6 +155,8 @@ class DarmaDatabase {
         account_id INTEGER NOT NULL,
         debit INTEGER NOT NULL DEFAULT 0,
         credit INTEGER NOT NULL DEFAULT 0,
+        person_id INTEGER,
+        FOREIGN KEY(person_id) REFERENCES people(id) ON DELETE RESTRICT,
         FOREIGN KEY(transaction_id) REFERENCES journal_transactions(id) ON DELETE CASCADE,
         FOREIGN KEY(account_id) REFERENCES accounts(id),
         CHECK(debit >= 0 AND credit >= 0),
@@ -132,6 +167,10 @@ class DarmaDatabase {
         'CREATE INDEX idx_entries_account ON journal_entries(account_id)');
     await db.execute(
         'CREATE INDEX idx_entries_transaction ON journal_entries(transaction_id)');
+    await db.execute(
+        'CREATE INDEX idx_entries_person ON journal_entries(person_id)');
+    await db.execute(
+        'CREATE INDEX idx_people_name ON people(full_name COLLATE NOCASE)');
   }
 
   Future<void> _seedDefaultAccounts(DatabaseExecutor db) async {
@@ -253,6 +292,7 @@ class DarmaDatabase {
         'account_id': entry.accountId,
         'debit': entry.debit,
         'credit': entry.credit,
+        'person_id': entry.personId,
       });
     }
   }
@@ -872,6 +912,149 @@ class DarmaDatabase {
       'breakdown': breakdown,
       'trend': trend,
     };
+  }
+
+  /// Creates a natural-person contact. Names are unique only by exact normalized
+  /// value so family members may legitimately share a name.
+  Future<int> createPerson({
+    required String fullName,
+    String? phone,
+    String? note,
+  }) async {
+    final name = fullName.trim();
+    if (name.isEmpty) throw ArgumentError('نام شخص الزامی است');
+    final cleanPhone = phone?.trim();
+    final cleanNote = note?.trim();
+    final now = DateTime.now().toIso8601String();
+    final db = await database;
+    return db.insert('people', {
+      'full_name': name,
+      'phone': cleanPhone == null || cleanPhone.isEmpty ? null : cleanPhone,
+      'note': cleanNote == null || cleanNote.isEmpty ? null : cleanNote,
+      'is_active': 1,
+      'created_at': now,
+      'updated_at': now,
+    });
+  }
+
+  /// Lists people with their signed ledger balance. Positive means receivable
+  /// from the person; negative means payable to the person.
+  Future<List<Map<String, Object?>>> getPeople({
+    bool includeInactive = false,
+  }) async {
+    final db = await database;
+    return db.rawQuery('''
+      SELECT p.id, p.full_name, p.phone, p.note, p.is_active,
+        p.created_at, p.updated_at,
+        COALESCE(SUM(e.debit - e.credit), 0) AS net_balance,
+        CASE WHEN COALESCE(SUM(e.debit - e.credit), 0) > 0
+          THEN COALESCE(SUM(e.debit - e.credit), 0) ELSE 0 END AS receivable_balance,
+        CASE WHEN COALESCE(SUM(e.debit - e.credit), 0) < 0
+          THEN -COALESCE(SUM(e.debit - e.credit), 0) ELSE 0 END AS payable_balance
+      FROM people p
+      LEFT JOIN journal_entries e ON e.person_id = p.id
+      WHERE (? = 1 OR p.is_active = 1)
+      GROUP BY p.id
+      ORDER BY p.is_active DESC, p.full_name COLLATE NOCASE, p.id
+    ''', [includeInactive ? 1 : 0]);
+  }
+
+  Future<Map<String, Object?>> getPerson(int personId) async {
+    final db = await database;
+    final rows = await db.query(
+      'people',
+      where: 'id = ?',
+      whereArgs: [personId],
+      limit: 1,
+    );
+    if (rows.isEmpty) throw StateError('شخص موردنظر پیدا نشد');
+    return rows.first;
+  }
+
+  Future<void> updatePerson({
+    required int personId,
+    required String fullName,
+    String? phone,
+    String? note,
+  }) async {
+    final name = fullName.trim();
+    if (name.isEmpty) throw ArgumentError('نام شخص الزامی است');
+    final db = await database;
+    final existing = await db.query(
+      'people',
+      columns: ['id'],
+      where: 'id = ?',
+      whereArgs: [personId],
+      limit: 1,
+    );
+    if (existing.isEmpty) throw StateError('شخص موردنظر پیدا نشد');
+    final cleanPhone = phone?.trim();
+    final cleanNote = note?.trim();
+    await db.update(
+      'people',
+      {
+        'full_name': name,
+        'phone': cleanPhone == null || cleanPhone.isEmpty ? null : cleanPhone,
+        'note': cleanNote == null || cleanNote.isEmpty ? null : cleanNote,
+        'updated_at': DateTime.now().toIso8601String(),
+      },
+      where: 'id = ?',
+      whereArgs: [personId],
+    );
+  }
+
+  Future<void> setPersonActive({
+    required int personId,
+    required bool isActive,
+  }) async {
+    final db = await database;
+    final changed = await db.update(
+      'people',
+      {
+        'is_active': isActive ? 1 : 0,
+        'updated_at': DateTime.now().toIso8601String(),
+      },
+      where: 'id = ?',
+      whereArgs: [personId],
+    );
+    if (changed == 0) throw StateError('شخص موردنظر پیدا نشد');
+  }
+
+  /// A person with journal history is retained; use inactive status instead.
+  Future<void> deletePerson(int personId) async {
+    final db = await database;
+    await db.transaction((txn) async {
+      final rows = await txn.query(
+        'people',
+        where: 'id = ?',
+        whereArgs: [personId],
+        limit: 1,
+      );
+      if (rows.isEmpty) throw StateError('شخص موردنظر پیدا نشد');
+      final linkedEntries = Sqflite.firstIntValue(await txn.rawQuery(
+        'SELECT COUNT(*) FROM journal_entries WHERE person_id = ?',
+        [personId],
+      )) ?? 0;
+      if (linkedEntries > 0) {
+        throw StateError('این شخص سابقه مالی دارد؛ به‌جای حذف، غیرفعالش کنید');
+      }
+      await txn.delete('people', where: 'id = ?', whereArgs: [personId]);
+    });
+  }
+
+  Future<List<Map<String, Object?>>> getPersonLedger(int personId) async {
+    final db = await database;
+    await getPerson(personId);
+    return db.rawQuery('''
+      SELECT e.id AS entry_id, e.transaction_id, e.account_id,
+        a.name AS account_name, e.debit, e.credit,
+        t.title, t.kind, t.amount, t.fee, t.note, t.created_at
+      FROM journal_entries e
+      JOIN journal_transactions t ON t.id = e.transaction_id
+      JOIN accounts a ON a.id = e.account_id
+      WHERE e.person_id = ?
+      ORDER BY t.created_at DESC, e.id DESC
+    ''', [personId]);
   }
 
   Future<void> close() async {
