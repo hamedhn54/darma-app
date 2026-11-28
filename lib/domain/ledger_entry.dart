@@ -1,12 +1,19 @@
 class LedgerEntry {
-  const LedgerEntry({required this.accountId, this.debit = 0, this.credit = 0});
+  const LedgerEntry({
+    required this.accountId,
+    this.debit = 0,
+    this.credit = 0,
+    this.personId,
+  });
 
   final int accountId;
   final int debit;
   final int credit;
+  final int? personId;
 
   bool get isValid =>
       accountId > 0 &&
+      (personId == null || personId! > 0) &&
       debit >= 0 &&
       credit >= 0 &&
       !(debit > 0 && credit > 0) &&
@@ -17,10 +24,11 @@ class LedgerEntry {
       other is LedgerEntry &&
       accountId == other.accountId &&
       debit == other.debit &&
-      credit == other.credit;
+      credit == other.credit &&
+      personId == other.personId;
 
   @override
-  int get hashCode => Object.hash(accountId, debit, credit);
+  int get hashCode => Object.hash(accountId, debit, credit, personId);
 }
 
 class LedgerDocument {
