@@ -628,115 +628,159 @@ class _DarmaHomeState extends State<DarmaHome> {
             ),
             child: CustomPaint(
               painter: _DarmaCardPainter(),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Row(
-                    children: [
-                      Container(
-                        width: 34,
-                      height: 36,
-                      decoration: BoxDecoration(
-                        color: const Color(0xFFD6B36A).withValues(alpha: .15),
-                        borderRadius: BorderRadius.circular(12),
-                      ),
-                      child: const Icon(Icons.account_balance_wallet_rounded,
-                        color: Color(0xFFE3C783), size: 19),
-                    ),
-                    const SizedBox(width: 9),
-                      const Expanded(
-                        child: Text('موجودی خالص حساب‌های نقدی',
-                        style: TextStyle(
-                          color: Color(0xFFE8EDF3),
-                          fontSize: 13,
-                          fontWeight: FontWeight.w700,
-                        )),
-                    ),
-                    const Icon(Icons.verified_user_outlined,
-                      color: Color(0xFF8DA4B7), size: 17),
-                  ],
-                ),
-                const SizedBox(height: 10),
-                  DropdownButtonFormField<int?>(
-                  value: _selectedCashAccountId,
-                  isExpanded: true,
-                  dropdownColor: const Color(0xFF1B3043),
-                  iconEnabledColor: const Color(0xFFE3C783),
-                  style: const TextStyle(
-                    color: Colors.white,
-                    fontSize: 12,
-                    fontWeight: FontWeight.w600,
-                  ),
-                  decoration: InputDecoration(
-                    labelText: 'حساب موردنظر',
-                    labelStyle: const TextStyle(color: Color(0xFFB6C3CF), fontSize: 11),
-                    filled: true,
-                    fillColor: Colors.white.withValues(alpha: .07),
-                    contentPadding: const EdgeInsets.symmetric(horizontal: 13, vertical: 2),
-                    enabledBorder: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(14),
-                      borderSide: BorderSide(color: Colors.white.withValues(alpha: .13)),
-                    ),
-                    focusedBorder: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(14),
-                      borderSide: const BorderSide(color: Color(0xFFD6B36A), width: 1.2),
-                    ),
-                  ),
-                  items: [
-                    const DropdownMenuItem<int?>(
-                      value: null,
-                      child: Text('مجموع همه حساب‌ها'),
-                    ),
-                    ..._cashAccounts.map((account) => DropdownMenuItem<int?>(
-                      value: account['id'] as int,
-                      child: Text(
-                        '${account['name']}${account['bank_name'] == null ? '' : ' • ${account['bank_name']}'}',
-                        overflow: TextOverflow.ellipsis,
-                      ),
-                    )),
-                  ],
-                  onChanged: (value) =>
-                      setState(() => _selectedCashAccountId = value),
-                ),
-                const SizedBox(height: 11),
-                  FittedBox(
-                  fit: BoxFit.scaleDown,
-                  alignment: Alignment.centerRight,
-                  child: Text(
-                    '${_moneyText(_displayBalance)}',
-                    maxLines: 1,
-                    style: const TextStyle(
-                      color: Colors.white,
-                      fontSize: 27,
-                      height: 1.18,
-                      fontWeight: FontWeight.w900,
-                      letterSpacing: -.6,
-                      fontFeatures: [ui.FontFeature.tabularFigures()],
-                    ),
-                  ),
-                ),
-                const SizedBox(height: 4),
-                const Text('ریال',
-                  style: TextStyle(color: Color(0xFFD6B36A), fontSize: 12,
-                    fontWeight: FontWeight.w800)),
-                const SizedBox(height: 11),
-                  Container(height: 1, color: Colors.white.withValues(alpha: .12)),
-                  const SizedBox(height: 9),
-                Row(
+              child: Padding(
+                padding: const EdgeInsets.all(2),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    const Icon(Icons.lock_outline_rounded,
-                      color: Color(0xFF8DA4B7), size: 14),
-                    const SizedBox(width: 6),
-                    const Expanded(
-                      child: Text('اطلاعات شما فقط روی همین دستگاه ذخیره می‌شود',
-                        style: TextStyle(color: Color(0xFFB6C3CF),
-                          fontSize: 10, fontWeight: FontWeight.w500)),
+                    Row(
+                      children: [
+                        Container(
+                          width: 34,
+                          height: 34,
+                          decoration: BoxDecoration(
+                            color: const Color(0xFFD6B36A).withValues(alpha: .15),
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                          child: const Icon(
+                            Icons.account_balance_wallet_rounded,
+                            color: Color(0xFFE3C783),
+                            size: 19,
+                          ),
+                        ),
+                        const SizedBox(width: 9),
+                        const Expanded(
+                          child: Text(
+                            'موجودی خالص حساب‌های نقدی',
+                            style: TextStyle(
+                              color: Color(0xFFE8EDF3),
+                              fontSize: 13,
+                              fontWeight: FontWeight.w700,
+                            ),
+                          ),
+                        ),
+                        const Icon(
+                          Icons.verified_user_outlined,
+                          color: Color(0xFF8DA4B7),
+                          size: 17,
+                        ),
+                      ],
                     ),
-                    Icon(Icons.refresh_rounded,
-                      color: const Color(0xFFD6B36A).withValues(alpha: .9), size: 16),
+                    const SizedBox(height: 10),
+                    DropdownButtonFormField<int?>(
+                      value: _selectedCashAccountId,
+                      isExpanded: true,
+                      dropdownColor: const Color(0xFF1B3043),
+                      iconEnabledColor: const Color(0xFFE3C783),
+                      style: const TextStyle(
+                        color: Colors.white,
+                        fontSize: 12,
+                        fontWeight: FontWeight.w600,
+                      ),
+                      decoration: InputDecoration(
+                        labelText: 'حساب موردنظر',
+                        labelStyle: const TextStyle(
+                          color: Color(0xFFB6C3CF),
+                          fontSize: 11,
+                        ),
+                        filled: true,
+                        fillColor: Colors.white.withValues(alpha: .07),
+                        contentPadding: const EdgeInsets.symmetric(
+                          horizontal: 13,
+                          vertical: 2,
+                        ),
+                        enabledBorder: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(14),
+                          borderSide: BorderSide(
+                            color: Colors.white.withValues(alpha: .13),
+                          ),
+                        ),
+                        focusedBorder: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(14),
+                          borderSide: const BorderSide(
+                            color: Color(0xFFD6B36A),
+                            width: 1.2,
+                          ),
+                        ),
+                      ),
+                      items: [
+                        const DropdownMenuItem<int?>(
+                          value: null,
+                          child: Text('مجموع همه حساب‌ها'),
+                        ),
+                        ..._cashAccounts.map(
+                          (account) => DropdownMenuItem<int?>(
+                            value: account['id'] as int,
+                            child: Text(
+                              '${account['name']}${account['bank_name'] == null ? '' : ' • ${account['bank_name']}'}',
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                          ),
+                        ),
+                      ],
+                      onChanged: (value) =>
+                          setState(() => _selectedCashAccountId = value),
+                    ),
+                    const SizedBox(height: 11),
+                    FittedBox(
+                      fit: BoxFit.scaleDown,
+                      alignment: Alignment.centerRight,
+                      child: Text(
+                        '${_moneyText(_displayBalance)}',
+                        maxLines: 1,
+                        style: const TextStyle(
+                          color: Colors.white,
+                          fontSize: 27,
+                          height: 1.18,
+                          fontWeight: FontWeight.w900,
+                          letterSpacing: -.6,
+                          fontFeatures: [ui.FontFeature.tabularFigures()],
+                        ),
+                      ),
+                    ),
+                    const SizedBox(height: 4),
+                    const Text(
+                      'ریال',
+                      style: TextStyle(
+                        color: Color(0xFFD6B36A),
+                        fontSize: 12,
+                        fontWeight: FontWeight.w800,
+                      ),
+                    ),
+                    const SizedBox(height: 11),
+                    Container(
+                      height: 1,
+                      color: Colors.white.withValues(alpha: .12),
+                    ),
+                    const SizedBox(height: 9),
+                    Row(
+                      children: [
+                        const Icon(
+                          Icons.lock_outline_rounded,
+                          color: Color(0xFF8DA4B7),
+                          size: 14,
+                        ),
+                        const SizedBox(width: 6),
+                        const Expanded(
+                          child: Text(
+                            'اطلاعات شما فقط روی همین دستگاه ذخیره می‌شود',
+                            style: TextStyle(
+                              color: Color(0xFFB6C3CF),
+                              fontSize: 10,
+                              fontWeight: FontWeight.w500,
+                            ),
+                          ),
+                        ),
+                        Icon(
+                          Icons.refresh_rounded,
+                          color: const Color(0xFFD6B36A).withValues(alpha: .9),
+                          size: 16,
+                        ),
+                      ],
+                    ),
                   ],
                 ),
-              ],
+              ),
             ),
           ),
           const SizedBox(height: 15),
